@@ -444,63 +444,201 @@
     },
 
     // ================ 兼容性分析 ================
-    analyzeCompatibility: function () {
+    // ================ 兼容性分析（修正版） ================
+    analyzeCompatibility: function() {
       var browser = this.results.browser;
       var features = this.results.features.es6;
+      var os = this.results.os;
       var issues = [];
+      var criticalIssues = [];
+      var warningIssues = [];
+      var infoIssues = [];
 
-      // 1. 检查浏览器类型
+      // ===== 1. 定义核心特性 =====
+      var CORE_FEATURES = ['proxy', 'reflect', 'promise', 'symbol'];
+      var IMPORTANT_FEATURES = ['map', 'set']; // 重要但不是绝对必需
+      var ENHANCEMENT_FEATURES = ['weakMap', 'weakSet', 'arrowFunctions',
+        'templateLiterals', 'letConst', 'classes',
+        'defaultParams', 'restParams', 'spread', 'destructuring'];
+
+      // ===== 2. 检查浏览器类型（核心问题） =====
+
+      // 2.1 Internet Explorer (完全不支持)
       if (browser.isIE) {
-        issues.push('Internet Explorer 不支持 Vue3');
+        criticalIssues.push({
+          type: 'critical',
+          message: 'Internet Explorer 不支持 Vue3',
+          description: 'Vue3 需要 ES6+ 特性，IE 完全不支持',
+          suggestion: '请更换为 Chrome、Firefox 或 Edge (Chromium) 等现代浏览器'
+        });
       }
 
-      if (browser.isEdgeLegacy) {
-        issues.push('Edge (Legacy) 不支持 Vue3，请升级到 Edge (Chromium)');
+      // 2.2 Edge Legacy (已停止支持)
+      else if (browser.isEdgeLegacy) {
+        criticalIssues.push({
+          type: 'critical',
+          message: 'Edge (Legacy) 已停止支持',
+          description: '请升级到基于 Chromium 的新版 Edge',
+          suggestion: '下载 Edge (Chromium): https://www.microsoft.com/edge'
+        });
       }
 
-      // 2. 检查浏览器版本
-      if (browser.name !== 'Unknown' && browser.version) {
-        var browserKey = browser.name.toLowerCase();
-        if (browserKey.indexOf('chrome') > -1) browserKey = 'chrome';
-        if (browserKey.indexOf('firefox') > -1) browserKey = 'firefox';
-        if (browserKey.indexOf('safari') > -1) browserKey = 'safari';
-        if (browserKey.indexOf('edge') > -1) browserKey = 'edge';
-        if (browserKey.indexOf('opera') > -1) browserKey = 'opera';
-
+      // 2.3 浏览器版本过低
+      else if (browser.name !== 'Unknown' && browser.version) {
+        var browserKey = this.getBrowserKey(browser.name);
         var minVersion = VUE3_REQUIREMENTS.browsers[browserKey];
+
         if (minVersion && browser.version < minVersion) {
-          issues.push(browser.name + ' 版本过低 (当前: ' + browser.version + ', 要求: ≥' + minVersion + ')');
+          var severity = browser.version < (minVersion - 20) ? 'critical' : 'warning';
+          var issuesArray = severity === 'critical' ? criticalIssues : warningIssues;
+
+          issuesArray.push({
+            type: severity,
+            message: browser.name + ' 版本过低',
+            description: '当前版本: v' + browser.version + '，要求: ≥v' + minVersion,
+            suggestion: '请升级到 ' + browser.name + ' v' + minVersion + ' 或更高版本'
+          });
         }
       }
 
-      // 3. 检查必需特性
-      for (var i = 0; i < VUE3_REQUIREMENTS.requiredFeatures.length; i++) {
-        var feature = VUE3_REQUIREMENTS.requiredFeatures[i].toLowerCase();
+      // ===== 3. 检查核心特性支持 =====
+
+      // 3.1 必需的核心特性
+      for (var i = 0; i < CORE_FEATURES.length; i++) {
+        var feature = CORE_FEATURES[i];
         if (!features[feature]) {
-          issues.push('不支持 ' + VUE3_REQUIREMENTS.requiredFeatures[i] + ' API');
+          criticalIssues.push({
+            type: 'critical',
+            message: '不支持 ' + feature.charAt(0).toUpperCase() + feature.slice(1) + ' API',
+            description: '这是 Vue3 响应式系统的必需特性',
+            suggestion: '请使用支持 ES6 Proxy 和 Reflect 的现代浏览器'
+          });
         }
       }
 
-      // 4. 确定兼容性等级
-      if (issues.length === 0) {
+      // 3.2 重要特性（影响部分功能）
+      for (var j = 0; j < IMPORTANT_FEATURES.length; j++) {
+        var importantFeature = IMPORTANT_FEATURES[j];
+        if (!features[importantFeature]) {
+          warningIssues.push({
+            type: 'warning',
+            message: '不支持 ' + importantFeature.charAt(0).toUpperCase() + importantFeature.slice(1),
+            description: '可能影响某些 Vue3 生态库的功能',
+            suggestion: '建议升级浏览器以获得完整支持'
+          });
+        }
+      }
+
+      // 3.3 增强特性（非必需）
+      for (var k = 0; k < ENHANCEMENT_FEATURES.length; k++) {
+        var enhancementFeature = ENHANCEMENT_FEATURES[k];
+        if (!features[enhancementFeature]) {
+          infoIssues.push({
+            type: 'info',
+            message: '不支持 ' + enhancementFeature,
+            description: '不影响 Vue3 核心功能，但可能影响某些高级用法',
+            suggestion: '可继续使用，如需完整 ES6 支持请升级浏览器'
+          });
+        }
+      }
+
+      // ===== 4. 操作系统特殊处理 =====
+
+      // Windows 7 限制
+      if (os.name === 'Windows' && os.version === '7') {
+        // 检查是否使用太新的浏览器（Win7 不支持）
+        var isTooNewBrowser = (browser.name === 'Chrome' && browser.version > 109) ||
+          (browser.name === 'Firefox' && browser.version > 115);
+
+        if (isTooNewBrowser) {
+          warningIssues.push({
+            type: 'warning',
+            message: 'Windows 7 对新版浏览器支持有限',
+            description: browser.name + ' v' + browser.version + ' 可能无法在 Windows 7 上正常运行',
+            suggestion: '使用 Chrome 109 及以下版本或考虑升级操作系统'
+          });
+        }
+      }
+
+      // Windows XP/2000 (完全不推荐)
+      if (os.name === 'Windows' && (os.version === 'XP' || os.version === '2000')) {
+        criticalIssues.push({
+          type: 'critical',
+          message: '操作系统已停止支持',
+          description: os.version + ' 已停止安全更新和技术支持',
+          suggestion: '强烈建议升级到 Windows 10 或 Windows 11'
+        });
+      }
+
+      // ===== 5. CSS 特性支持 =====
+      var cssFeatures = this.results.features.css;
+      var missingCSS = [];
+
+      for (var cssKey in cssFeatures) {
+        if (cssFeatures.hasOwnProperty(cssKey) && !cssFeatures[cssKey]) {
+          missingCSS.push(cssKey);
+        }
+      }
+
+      if (missingCSS.length > 0) {
+        infoIssues.push({
+          type: 'info',
+          message: '部分 CSS 特性不支持',
+          description: '不支持: ' + missingCSS.join(', '),
+          suggestion: '可能导致样式显示问题，但不影响 Vue3 功能'
+        });
+      }
+
+      // ===== 6. WebGL 支持 =====
+      if (!this.results.features.webgl) {
+        infoIssues.push({
+          type: 'info',
+          message: '不支持 WebGL',
+          description: '影响 3D 和 Canvas 相关功能',
+          suggestion: '普通网页功能不受影响'
+        });
+      }
+
+      // ===== 7. 合并所有问题并确定兼容性等级 =====
+
+      // 所有问题（用于显示）
+      var allIssues = criticalIssues.concat(warningIssues).concat(infoIssues);
+
+      // 转换为简单消息数组（向后兼容）
+      var issueMessages = [];
+      for (var m = 0; m < allIssues.length; m++) {
+        issueMessages.push(allIssues[m].message);
+      }
+
+      // 确定兼容性等级
+      if (criticalIssues.length > 0) {
+        this.results.compatibility.level = 'incompatible';
+        this.results.compatibility.description = '不兼容';
+      } else if (warningIssues.length > 0) {
+        this.results.compatibility.level = 'partial';
+        this.results.compatibility.description = '部分兼容';
+      } else if (infoIssues.length > 0) {
+        this.results.compatibility.level = 'partial';
+        this.results.compatibility.description = '部分兼容';
+      } else {
         this.results.compatibility.level = 'compatible';
         this.results.compatibility.description = '完全兼容';
-      } else {
-        // 判断是否为核心问题
-        var criticalIssues = issues.filter(function (issue) {
-          return issue.indexOf('不支持') > -1 || issue.indexOf('Internet Explorer') > -1 || issue.indexOf('Edge (Legacy)') > -1;
-        });
-
-        if (criticalIssues.length > 0) {
-          this.results.compatibility.level = 'incompatible';
-          this.results.compatibility.description = '不兼容';
-        } else {
-          this.results.compatibility.level = 'partial';
-          this.results.compatibility.description = '部分兼容';
-        }
       }
 
-      this.results.compatibility.issues = issues;
+      // 存储详细问题信息
+      this.results.compatibility.issues = issueMessages;
+      this.results.compatibility.detailedIssues = {
+        critical: criticalIssues,
+        warning: warningIssues,
+        info: infoIssues
+      };
+
+      console.log('兼容性分析完成:', {
+        level: this.results.compatibility.level,
+        critical: criticalIssues.length,
+        warning: warningIssues.length,
+        info: infoIssues.length
+      });
     },
 
     // ================ 显示相关 ================
@@ -640,15 +778,66 @@
       html += '</div>';
 
       // 3. 问题明细（如果有）
-      if (results.compatibility.issues.length > 0) {
-        html += '<div class="issues-section">';
-        html += '<h3>⚠️ 检测到的问题</h3>';
-        html += '<ul class="issues-list">';
-        for (var i = 0; i < results.compatibility.issues.length; i++) {
-          html += '<li>' + results.compatibility.issues[i] + '</li>';
+      if (results.compatibility.detailedIssues) {
+        var detailed = results.compatibility.detailedIssues;
+        var hasAnyIssues = detailed.critical.length > 0 ||
+          detailed.warning.length > 0 ||
+          detailed.info.length > 0;
+
+        if (hasAnyIssues) {
+          html += '<div class="issues-section">';
+          html += '<h3>📋 详细问题报告</h3>';
+
+          // 显示严重问题
+          if (detailed.critical.length > 0) {
+            html += '<div class="issue-category critical">';
+            html += '<h4>❌ 严重问题 (' + detailed.critical.length + ' 个)</h4>';
+            html += '<p class="category-desc">这些问题导致无法运行 Vue3</p>';
+            html += '<ul class="issues-list">';
+            for (var i = 0; i < detailed.critical.length; i++) {
+              html += '<li class="critical-issue">';
+              html += '<strong>' + detailed.critical[i].message + '</strong>';
+              html += '<p class="issue-desc">' + detailed.critical[i].description + '</p>';
+              html += '</li>';
+            }
+            html += '</ul>';
+            html += '</div>';
+          }
+
+          // 显示警告问题
+          if (detailed.warning.length > 0) {
+            html += '<div class="issue-category warning">';
+            html += '<h4>⚠️ 建议优化 (' + detailed.warning.length + ' 个)</h4>';
+            html += '<p class="category-desc">这些问题可能影响使用体验</p>';
+            html += '<ul class="issues-list">';
+            for (var j = 0; j < detailed.warning.length; j++) {
+              html += '<li class="warning-issue">';
+              html += '<strong>' + detailed.warning[j].message + '</strong>';
+              html += '<p class="issue-desc">' + detailed.warning[j].description + '</p>';
+              html += '</li>';
+            }
+            html += '</ul>';
+            html += '</div>';
+          }
+
+          // 显示信息问题
+          if (detailed.info.length > 0) {
+            html += '<div class="issue-category info">';
+            html += '<h4>ℹ️ 参考信息 (' + detailed.info.length + ' 个)</h4>';
+            html += '<p class="category-desc">这些问题不影响核心功能</p>';
+            html += '<ul class="issues-list">';
+            for (var k = 0; k < detailed.info.length; k++) {
+              html += '<li class="info-issue">';
+              html += '<strong>' + detailed.info[k].message + '</strong>';
+              html += '<p class="issue-desc">' + detailed.info[k].description + '</p>';
+              html += '</li>';
+            }
+            html += '</ul>';
+            html += '</div>';
+          }
+
+          html += '</div>';
         }
-        html += '</ul>';
-        html += '</div>';
       }
 
       // 4. 优化建议
@@ -728,221 +917,244 @@
     },
 
     // ================ 优化建议生成器 ================
-    generateSuggestions: function () {
+    // ================ 优化建议生成器（修正版） ================
+    generateSuggestions: function() {
       var results = this.results;
-      var browser = results.browser;
-      var features = results.features;
-      var os = results.os;
+      var compatibility = results.compatibility;
+      var detailedIssues = compatibility.detailedIssues;
       var suggestions = [];
 
-      // ===== 1. 浏览器相关建议 =====
+      console.log('生成建议，兼容性等级:', compatibility.level);
 
-      // IE 浏览器
-      if (browser.isIE) {
-        suggestions.push({
-          type: 'critical',
-          category: 'browser',
-          title: '更换浏览器',
-          description: 'Internet Explorer 不支持 Vue3，请更换为现代浏览器',
-          details: 'Vue3 依赖 ES6+ 特性，IE 完全不支持。',
-          actions: [{text: '下载 Chrome', url: 'https://www.google.com/chrome/'}, {
-            text: '下载 Firefox',
-            url: 'https://www.mozilla.org/firefox/',
-          }, {text: '下载 Edge', url: 'https://www.microsoft.com/edge'}],
-        });
-      }
+      // ===== 1. 根据兼容性等级生成主建议 =====
 
-      // Edge Legacy
-      else if (browser.isEdgeLegacy) {
-        suggestions.push({
-          type: 'critical',
-          category: 'browser',
-          title: '升级 Edge 浏览器',
-          description: 'Edge (Legacy) 已停止支持，请升级到 Edge (Chromium)',
-          details: 'Edge (Chromium) 是基于 Chrome 的新版本，完全支持 Vue3。',
-          actions: [{text: '下载 Edge (Chromium)', url: 'https://www.microsoft.com/edge'}],
-        });
-      }
+      if (compatibility.level === 'incompatible') {
+        // 不兼容：显示核心问题解决方案
+        if (detailedIssues.critical && detailedIssues.critical.length > 0) {
+          var mainCritical = detailedIssues.critical[0]; // 取第一个核心问题
 
-      // 浏览器版本过低
-      else if (browser.name !== 'Unknown' && browser.version) {
-        var browserKey = this.getBrowserKey(browser.name);
-        var minVersion = VUE3_REQUIREMENTS.browsers[browserKey];
-
-        if (minVersion && browser.version < minVersion) {
           suggestions.push({
-            type: browser.version < minVersion - 20 ? 'critical' : 'warning',
+            type: 'critical',
             category: 'browser',
-            title: '升级 ' + browser.name + ' 版本',
-            description: browser.name + ' 版本过低 (当前: v' + browser.version + ', 要求: ≥v' + minVersion + ')',
-            details: 'Vue3 需要较新版本的浏览器以获得更好的性能和安全性。',
-            actions: this.getBrowserUpgradeActions(browser.name),
+            title: '无法运行 Vue3',
+            description: mainCritical.message,
+            details: mainCritical.description,
+            actions: this.getCriticalIssueActions(mainCritical)
           });
+
+          // 如果有多个核心问题，添加额外建议
+          if (detailedIssues.critical.length > 1) {
+            suggestions.push({
+              type: 'critical',
+              category: 'multiple',
+              title: '存在多个兼容性问题',
+              description: '共发现 ' + detailedIssues.critical.length + ' 个核心问题',
+              details: '需要解决所有核心问题才能运行 Vue3 应用',
+              actions: [{ text: '查看所有问题', url: '#' }]
+            });
+          }
         }
       }
+      else if (compatibility.level === 'partial') {
+        // 部分兼容：显示优化建议
+        var hasWarningIssues = detailedIssues.warning && detailedIssues.warning.length > 0;
+        var hasOnlyInfoIssues = !hasWarningIssues && detailedIssues.info && detailedIssues.info.length > 0;
 
-      // ===== 2. 核心特性不支持 =====
+        if (hasWarningIssues) {
+          // 有警告级别问题
+          var mainWarning = detailedIssues.warning[0];
 
-      // Proxy API
-      if (!features.es6.proxy) {
-        suggestions.push({
-          type: 'critical',
-          category: 'feature',
-          title: '不支持 Proxy API',
-          description: '您的浏览器不支持 JavaScript Proxy API',
-          details: 'Vue3 的响应式系统依赖 Proxy API 实现，这是必需特性。',
-          actions: [{text: '查看浏览器支持情况', url: 'https://caniuse.com/proxy'}, {
-            text: '更换支持的浏览器',
-            url: '#',
-          }],
-        });
-      }
-
-      // Reflect API
-      if (!features.es6.reflect) {
-        suggestions.push({
-          type: 'critical',
-          category: 'feature',
-          title: '不支持 Reflect API',
-          description: '您的浏览器不支持 JavaScript Reflect API',
-          details: 'Vue3 的部分功能依赖 Reflect API。',
-          actions: [{text: '查看浏览器支持情况', url: 'https://caniuse.com/mdn-javascript_builtins_reflect'}],
-        });
-      }
-
-      // ===== 3. ES6 特性支持不全 =====
-      var missingES6Features = [];
-      for (var key in features.es6) {
-        if (features.es6.hasOwnProperty(key) && !features.es6[key] && ['proxy', 'reflect'].indexOf(key) === -1) {
-          missingES6Features.push(key);
-        }
-      }
-
-      if (missingES6Features.length > 0 && missingES6Features.length < 5) {
-        suggestions.push({
-          type: 'warning',
-          category: 'feature',
-          title: '部分 ES6 特性不支持',
-          description: '缺少 ' + missingES6Features.join(', ') + ' 等特性',
-          details: '可能影响 Vue3 某些高级功能，但核心功能仍可用。',
-          actions: [{text: '升级浏览器以获得完整支持', url: '#'}],
-        });
-      }
-
-      // ===== 4. CSS 特性支持 =====
-      var missingCSSFeatures = [];
-      for (var key in features.css) {
-        if (features.css.hasOwnProperty(key) && !features.css[key]) {
-          missingCSSFeatures.push(key);
-        }
-      }
-
-      if (missingCSSFeatures.length > 0) {
-        suggestions.push({
-          type: 'info',
-          category: 'css',
-          title: 'CSS 特性支持不全',
-          description: '不支持 ' + missingCSSFeatures.join(', ') + ' 等 CSS 特性',
-          details: '可能导致页面样式显示不正常，但不影响 Vue3 核心功能运行。',
-          actions: [{text: '了解 CSS 兼容性', url: 'https://caniuse.com/'}],
-        });
-      }
-
-      // ===== 5. WebGL 不支持 =====
-      if (!features.webgl) {
-        suggestions.push({
-          type: 'info',
-          category: 'hardware',
-          title: '不支持 WebGL',
-          description: '您的浏览器或设备不支持 WebGL',
-          details: '影响 Vue3 的 3D 和 Canvas 相关组件，普通网页功能不受影响。',
-          actions: [{text: '启用 WebGL 指南', url: 'https://get.webgl.org/'}, {text: '检查显卡驱动', url: '#'}],
-        });
-      }
-
-      // ===== 6. 操作系统相关建议 =====
-
-      // Windows 7 特殊处理
-      if (os.name === 'Windows' && os.version === '7') {
-        var isModernBrowser = browser.name === 'Chrome' && browser.version >= 64 || browser.name === 'Firefox' && browser.version >= 59 || browser.name === 'Edge' && browser.version >= 79;
-
-        if (!isModernBrowser) {
           suggestions.push({
             type: 'warning',
-            category: 'os',
-            title: 'Windows 7 系统限制',
-            description: 'Windows 7 对新版浏览器支持有限',
-            details: 'Windows 7 最高支持 Chrome 109。请确保使用支持的浏览器版本。',
-            actions: [{
-              text: '升级到 Windows 10/11',
-              url: 'https://www.microsoft.com/windows',
-            }, {text: '使用支持的浏览器版本', url: '#'}],
+            category: 'optimization',
+            title: '可运行 Vue3，建议优化',
+            description: '您的浏览器可以运行 Vue3，但部分功能可能受限',
+            details: '发现 ' + detailedIssues.warning.length + ' 个建议优化的问题。' +
+              '例如：' + mainWarning.message,
+            actions: [
+              { text: '查看优化建议', url: '#' },
+              { text: '升级浏览器', url: this.getBrowserDownloadUrl(results.browser.name) }
+            ]
+          });
+        } else if (hasOnlyInfoIssues) {
+          // 只有信息级别问题（如 WeakMap/WeakSet）
+          suggestions.push({
+            type: 'info',
+            category: 'compatibility',
+            title: '部分兼容 Vue3',
+            description: '核心功能完全支持，部分增强特性不可用',
+            details: '您的浏览器支持所有 Vue3 必需特性，可以正常运行 Vue3 应用。' +
+              '仅部分高级 ES6 特性不支持，不影响大多数使用场景。',
+            actions: [
+              { text: '继续使用当前浏览器', url: '#' },
+              { text: '了解 Vue3 兼容性', url: 'https://v3.vuejs.org/guide/migration/introduction.html#browser-support' }
+            ]
+          });
+        }
+      }
+      else if (compatibility.level === 'compatible') {
+        // 完全兼容
+        suggestions.push({
+          type: 'success',
+          category: 'compatibility',
+          title: '完全兼容 Vue3',
+          description: '您的浏览器环境非常适合运行 Vue3 应用',
+          details: '所有必需特性和大多数增强特性都支持，可以流畅运行 Vue3 开发的项目。',
+          actions: [
+            { text: '学习 Vue3', url: 'https://vuejs.org/' },
+            { text: 'Vue3 官方文档', url: 'https://v3.vuejs.org/' }
+          ]
+        });
+      }
+
+      // ===== 2. 添加具体问题建议 =====
+
+      // 2.1 浏览器版本建议
+      if (results.browser.name !== 'Unknown' && results.browser.version) {
+        var browserKey = this.getBrowserKey(results.browser.name);
+        var minVersion = VUE3_REQUIREMENTS.browsers[browserKey];
+
+        if (minVersion && results.browser.version < minVersion) {
+          // 已经在 critical/warning 中处理过了，这里可以跳过或细化
+        }
+      }
+
+      // 2.2 具体特性建议
+      if (detailedIssues.info && detailedIssues.info.length > 0) {
+        // WeakMap/WeakSet 特殊建议
+        var hasWeakMapSet = false;
+        for (var i = 0; i < detailedIssues.info.length; i++) {
+          if (detailedIssues.info[i].message.indexOf('WeakMap') > -1 ||
+            detailedIssues.info[i].message.indexOf('WeakSet') > -1) {
+            hasWeakMapSet = true;
+            break;
+          }
+        }
+
+        if (hasWeakMapSet) {
+          suggestions.push({
+            type: 'info',
+            category: 'feature',
+            title: '关于 WeakMap/WeakSet',
+            description: '高级 ES6 特性支持',
+            details: 'WeakMap 和 WeakSet 是 ES6 高级特性，大多数 Vue3 应用不依赖它们。' +
+              '只有使用特定高级功能（如 Vue DevTools 的某些特性）时才需要。',
+            actions: [
+              { text: '了解 WeakMap/WeakSet', url: 'https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WeakMap' },
+              { text: 'Vue3 技术要求', url: 'https://v3.vuejs.org/guide/migration/introduction.html#browser-support' }
+            ]
           });
         }
       }
 
-      // Windows XP 及更早
-      if (os.name === 'Windows' && (os.version === 'XP' || os.version === '2000')) {
-        suggestions.push({
-          type: 'critical',
-          category: 'os',
-          title: '操作系统已停止支持',
-          description: os.version + ' 已停止安全更新和技术支持',
-          details: '建议升级到 Windows 10 或 Windows 11 以获得更好的安全性和兼容性。',
-          actions: [{text: '升级到 Windows 10/11', url: 'https://www.microsoft.com/windows'}, {
-            text: '考虑更换操作系统',
-            url: '#',
-          }],
-        });
+      // 2.3 CSS 特性建议
+      if (detailedIssues.info) {
+        for (var j = 0; j < detailedIssues.info.length; j++) {
+          if (detailedIssues.info[j].message.indexOf('CSS') > -1) {
+            suggestions.push({
+              type: 'info',
+              category: 'css',
+              title: 'CSS 特性支持',
+              description: '样式显示可能受影响',
+              details: '不支持某些 CSS 特性可能导致页面样式与设计不一致，' +
+                '但不会影响 Vue3 的功能和交互。',
+              actions: [
+                { text: 'CSS 兼容性查询', url: 'https://caniuse.com/' },
+                { text: '现代 CSS 学习', url: 'https://developer.mozilla.org/zh-CN/docs/Web/CSS' }
+              ]
+            });
+            break;
+          }
+        }
       }
 
-      // ===== 7. 硬件相关建议 =====
-
-      // 内存可能不足（检测到且小于 2GB）
+      // 2.4 硬件建议（如果硬件信息可用且较低）
       if (results.hardware.memory && results.hardware.memory !== 'Unknown') {
         var memoryGB = parseFloat(results.hardware.memory);
         if (memoryGB < 2) {
           suggestions.push({
             type: 'warning',
             category: 'hardware',
-            title: '内存可能不足',
-            description: '当前内存: ' + results.hardware.memory + ' (建议 ≥ 2GB)',
-            details: '内存不足可能导致运行大型 Vue3 应用时页面卡顿。',
-            actions: [{text: '关闭不必要的标签页', url: '#'}, {text: '考虑升级硬件', url: '#'}],
+            title: '硬件性能注意',
+            description: '内存较小：' + results.hardware.memory,
+            details: '运行大型 Vue3 应用时可能出现卡顿，建议关闭不必要的标签页和程序。',
+            actions: [
+              { text: '内存优化技巧', url: 'https://support.microsoft.com/zh-cn/windows' }
+            ]
           });
         }
       }
 
-      // CPU 核心数较少
-      if (results.hardware.cpuCores && results.hardware.cpuCores !== 'Unknown') {
-        if (results.hardware.cpuCores < 2) {
-          suggestions.push({
-            type: 'info',
-            category: 'hardware',
-            title: 'CPU 核心数较少',
-            description: '当前 CPU 核心: ' + results.hardware.cpuCores + ' (建议 ≥ 2核心)',
-            details: '可能影响复杂 Vue3 应用的渲染性能。',
-            actions: [{text: '关闭后台程序', url: '#'}],
-          });
-        }
-      }
-
-      // ===== 8. 如果没有问题 =====
+      // ===== 3. 如果没有生成任何建议，添加一个默认建议 =====
       if (suggestions.length === 0) {
         suggestions.push({
-          type: 'success',
+          type: 'info',
           category: 'general',
-          title: '环境优秀',
-          description: '您的浏览器环境非常适合运行 Vue3 应用',
-          details: '所有必需特性都支持，可以流畅运行 Vue3 开发的项目。',
-          actions: [{text: '学习 Vue3', url: 'https://vuejs.org/'}, {
-            text: 'Vue3 官方文档',
-            url: 'https://v3.vuejs.org/',
-          }],
+          title: '检测完成',
+          description: '请查看上方详细结果',
+          details: '检测已完成，请查看环境信息和兼容性详情。',
+          actions: [
+            { text: '重新检测', url: '#' }
+          ]
         });
       }
 
       return suggestions;
+    },
+
+    // ================ 新增辅助函数 ================
+    getCriticalIssueActions: function(issue) {
+      var actions = [];
+
+      if (issue.message.indexOf('Internet Explorer') > -1) {
+        actions = [
+          { text: '下载 Chrome', url: 'https://www.google.com/chrome/' },
+          { text: '下载 Firefox', url: 'https://www.mozilla.org/firefox/' },
+          { text: '下载 Edge', url: 'https://www.microsoft.com/edge' }
+        ];
+      }
+      else if (issue.message.indexOf('Edge (Legacy)') > -1) {
+        actions = [
+          { text: '下载 Edge (Chromium)', url: 'https://www.microsoft.com/edge' },
+          { text: 'Edge 升级指南', url: 'https://support.microsoft.com/help/4027667' }
+        ];
+      }
+      else if (issue.message.indexOf('版本过低') > -1) {
+        var browserName = issue.message.split(' ')[0];
+        actions = this.getBrowserUpgradeActions(browserName);
+      }
+      else if (issue.message.indexOf('Proxy') > -1 || issue.message.indexOf('Reflect') > -1) {
+        actions = [
+          { text: '查看浏览器支持', url: 'https://caniuse.com/proxy' },
+          { text: '更换现代浏览器', url: 'https://www.google.com/chrome/' }
+        ];
+      }
+      else {
+        actions = [
+          { text: '查看解决方案', url: '#' },
+          { text: '重新检测', url: '#' }
+        ];
+      }
+
+      return actions;
+    },
+
+    getBrowserDownloadUrl: function(browserName) {
+      var urls = {
+        'Chrome': 'https://www.google.com/chrome/',
+        'Firefox': 'https://www.mozilla.org/firefox/',
+        'Safari': 'https://support.apple.com/safari',
+        'Edge': 'https://www.microsoft.com/edge',
+        'Opera': 'https://www.opera.com/'
+      };
+
+      for (var key in urls) {
+        if (browserName.indexOf(key) > -1) {
+          return urls[key];
+        }
+      }
+
+      return 'https://www.google.com/chrome/';
     },
 
     // ================ 辅助函数 ================
