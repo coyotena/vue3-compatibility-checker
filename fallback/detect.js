@@ -1,165 +1,580 @@
 // ==============================================
 // Vue3 兼容性检测器 - 降级版（ES5语法）
-// 确保兼容 IE11、Chrome 50+ 等老旧浏览器
+// 版本：v1.1 - 增强浏览器信息解析
 // ==============================================
 
 ;(function() {
   'use strict';
 
-  // 全局对象，避免污染全局命名空间
+  // Vue3 官方兼容标准
+  var VUE3_REQUIREMENTS = {
+    // 最低浏览器版本要求
+    browsers: {
+      chrome: 64,
+      firefox: 59,
+      safari: 11,
+      edge: 79,
+      opera: 51,
+      ie: null, // IE 不支持 Vue3
+      samsung: 9, // Samsung Internet
+      uc: 12 // UC Browser
+    },
+
+    // 必需的 ES6+ 特性
+    requiredFeatures: ['Proxy', 'Reflect', 'Promise', 'Symbol', 'Map', 'Set', 'WeakMap', 'WeakSet']
+  };
+
+  // 全局对象
   var Vue3Detector = {
     // 检测结果存储
-    results: {},
+    results: {
+      detectionTime: '',
+      compatibility: {
+        level: '', // 'compatible', 'partial', 'incompatible'
+        description: '',
+        issues: []
+      },
+      browser: {},
+      os: {},
+      hardware: {},
+      features: {}
+    },
 
-    // 初始化检测
+    // ================ 主入口 ================
     runDetection: function() {
       console.log('开始 Vue3 兼容性检测...');
+
+      // 记录检测时间
+      this.results.detectionTime = new Date().toLocaleString();
 
       // 显示加载中
       this.showLoading(true);
 
-      // 逐步执行检测（使用 setTimeout 模拟异步，避免阻塞）
+      // 执行检测
       var self = this;
       setTimeout(function() {
-        self.collectBrowserInfo();
-        self.checkVue3Features();
-        self.analyzeCompatibility();
-        self.displayResults();
-        self.showLoading(false);
-      }, 500); // 短暂延迟，让用户看到加载效果
+        try {
+          self.collectAllInfo();
+          self.analyzeCompatibility();
+          self.displayResults();
+        } catch (error) {
+          self.showError(error.message);
+        } finally {
+          self.showLoading(false);
+        }
+      }, 800); // 稍长的延迟，让检测更真实
     },
 
-    // 显示/隐藏加载动画
-    showLoading: function(show) {
-      var loadingEl = document.getElementById('loading');
-      var resultEl = document.getElementById('result');
+    // ================ 信息收集 ================
+    collectAllInfo: function() {
+      console.log('收集环境信息...');
 
-      if (show) {
-        loadingEl.style.display = 'block';
-        resultEl.style.display = 'none';
-      } else {
-        loadingEl.style.display = 'none';
-        resultEl.style.display = 'block';
-      }
+      // 1. 浏览器信息
+      this.results.browser = this.detectBrowserInfo();
+
+      // 2. 操作系统信息
+      this.results.os = this.detectOSInfo();
+
+      // 3. 硬件信息（基础）
+      this.results.hardware = this.detectHardwareInfo();
+
+      // 4. 特性支持检测
+      this.results.features = this.detectFeatureSupport();
     },
 
-    // 收集浏览器信息
-    collectBrowserInfo: function() {
-      console.log('收集浏览器信息...');
+    // ================ 浏览器信息检测 ================
+    detectBrowserInfo: function() {
       var ua = navigator.userAgent;
+      var appVersion = navigator.appVersion;
+      var vendor = navigator.vendor || '';
 
-      this.results.browser = {
+      var browser = {
         userAgent: ua,
-        language: navigator.language,
-        platform: navigator.platform,
-        vendor: navigator.vendor
+        appVersion: appVersion,
+        vendor: vendor,
+        name: 'Unknown',
+        version: 0,
+        fullVersion: 'Unknown',
+        engine: 'Unknown',
+        engineVersion: 'Unknown',
+        isIE: false,
+        isEdgeLegacy: false
       };
+
+      // ===== 1. 检测浏览器类型和版本 =====
+
+      // Edge (Chromium)
+      if (ua.indexOf('Edg/') > -1) {
+        browser.name = 'Edge (Chromium)';
+        var match = ua.match(/Edg\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // Edge (Legacy)
+      else if (ua.indexOf('Edge') > -1) {
+        browser.name = 'Edge (Legacy)';
+        browser.isEdgeLegacy = true;
+        var match = ua.match(/Edge\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // Chrome
+      else if (ua.indexOf('Chrome') > -1 && ua.indexOf('OPR') === -1 && ua.indexOf('Edge') === -1) {
+        browser.name = 'Chrome';
+        var match = ua.match(/Chrome\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // Firefox
+      else if (ua.indexOf('Firefox') > -1) {
+        browser.name = 'Firefox';
+        var match = ua.match(/Firefox\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // Safari
+      else if (ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') === -1) {
+        browser.name = 'Safari';
+        var match = ua.match(/Version\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // Opera
+      else if (ua.indexOf('OPR') > -1) {
+        browser.name = 'Opera';
+        var match = ua.match(/OPR\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // IE 11
+      else if (ua.indexOf('Trident') > -1) {
+        browser.name = 'Internet Explorer';
+        browser.isIE = true;
+        browser.version = 11;
+      }
+      // IE 6-10
+      else if (ua.indexOf('MSIE') > -1) {
+        browser.name = 'Internet Explorer';
+        browser.isIE = true;
+        var match = ua.match(/MSIE (\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // UC Browser
+      else if (ua.indexOf('UCBrowser') > -1) {
+        browser.name = 'UC Browser';
+        var match = ua.match(/UCBrowser\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+      // Samsung Internet
+      else if (ua.indexOf('SamsungBrowser') > -1) {
+        browser.name = 'Samsung Internet';
+        var match = ua.match(/SamsungBrowser\/(\d+\.?\d*)/);
+        if (match) browser.version = parseFloat(match[1]);
+      }
+
+      // ===== 2. 检测渲染引擎 =====
+      if (ua.indexOf('AppleWebKit') > -1) {
+        browser.engine = 'WebKit';
+        var match = ua.match(/AppleWebKit\/(\d+\.?\d*)/);
+        if (match) browser.engineVersion = match[1];
+      } else if (ua.indexOf('Gecko') > -1 && ua.indexOf('like Gecko') === -1) {
+        browser.engine = 'Gecko';
+      } else if (ua.indexOf('Trident') > -1) {
+        browser.engine = 'Trident';
+        var match = ua.match(/Trident\/(\d+\.?\d*)/);
+        if (match) browser.engineVersion = match[1];
+      } else if (ua.indexOf('EdgeHTML') > -1) {
+        browser.engine = 'EdgeHTML';
+        var match = ua.match(/EdgeHTML\/(\d+\.?\d*)/);
+        if (match) browser.engineVersion = match[1];
+      } else if (ua.indexOf('Blink') > -1) {
+        browser.engine = 'Blink';
+      }
+
+      // ===== 3. 检测JS引擎信息 =====
+      // 通过特性检测推断JS引擎能力
+      browser.jsEngine = {
+        supportsES6: this.testES6Support(),
+        supportsES2016: this.testES2016Support(),
+        supportsES2017: this.testES2017Support()
+      };
+
+      browser.fullVersion = browser.version.toString();
+      return browser;
     },
 
-    // 检测 Vue3 必需特性
-    checkVue3Features: function() {
-      console.log('检测 Vue3 特性支持...');
+    // ================ 操作系统检测 ================
+    detectOSInfo: function() {
+      var ua = navigator.userAgent;
+      var platform = navigator.platform || '';
+      var os = {
+        name: 'Unknown',
+        version: 'Unknown',
+        architecture: 'Unknown',
+        platform: platform
+      };
 
-      this.results.features = {
+      // Windows
+      if (platform.indexOf('Win') > -1 || ua.indexOf('Windows') > -1) {
+        os.name = 'Windows';
+
+        // Windows 版本检测
+        if (ua.indexOf('Windows NT 10.0') > -1) os.version = '10';
+        else if (ua.indexOf('Windows NT 6.3') > -1) os.version = '8.1';
+        else if (ua.indexOf('Windows NT 6.2') > -1) os.version = '8';
+        else if (ua.indexOf('Windows NT 6.1') > -1) os.version = '7';
+        else if (ua.indexOf('Windows NT 6.0') > -1) os.version = 'Vista';
+        else if (ua.indexOf('Windows NT 5.1') > -1) os.version = 'XP';
+        else if (ua.indexOf('Windows NT 5.0') > -1) os.version = '2000';
+        else os.version = 'Unknown';
+      }
+      // macOS
+      else if (platform.indexOf('Mac') > -1 || ua.indexOf('Mac OS') > -1) {
+        os.name = 'macOS';
+        var match = ua.match(/Mac OS X (\d+[._]\d+[._]?\d*)/);
+        if (match) os.version = match[1].replace(/_/g, '.');
+      }
+      // Linux
+      else if (platform.indexOf('Linux') > -1 || ua.indexOf('Linux') > -1) {
+        os.name = 'Linux';
+        // 尝试检测具体发行版
+        if (ua.indexOf('Ubuntu') > -1) os.version = 'Ubuntu';
+        else if (ua.indexOf('Fedora') > -1) os.version = 'Fedora';
+        else if (ua.indexOf('CentOS') > -1) os.version = 'CentOS';
+        else if (ua.indexOf('Debian') > -1) os.version = 'Debian';
+        else os.version = 'Unknown';
+      }
+      // Android
+      else if (ua.indexOf('Android') > -1) {
+        os.name = 'Android';
+        var match = ua.match(/Android (\d+\.?\d*)/);
+        if (match) os.version = match[1];
+      }
+      // iOS
+      else if (ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1) {
+        os.name = 'iOS';
+        var match = ua.match(/OS (\d+[._]\d+)/);
+        if (match) os.version = match[1].replace(/_/g, '.');
+      }
+
+      // 检测系统架构（有限支持）
+      if (ua.indexOf('Win64') > -1 || ua.indexOf('x64') > -1) {
+        os.architecture = '64-bit';
+      } else if (ua.indexOf('WOW64') > -1) {
+        os.architecture = '32-bit on 64-bit';
+      } else if (platform.indexOf('Win32') > -1) {
+        os.architecture = '32-bit';
+      }
+
+      return os;
+    },
+
+    // ================ 硬件信息检测 ================
+    detectHardwareInfo: function() {
+      var hardware = {
+        cpuCores: 'Unknown',
+        memory: 'Unknown',
+        screen: {
+          width: window.screen.width,
+          height: window.screen.height,
+          colorDepth: window.screen.colorDepth,
+          pixelRatio: window.devicePixelRatio || 1
+        }
+      };
+
+      // CPU核心数
+      if (navigator.hardwareConcurrency) {
+        hardware.cpuCores = navigator.hardwareConcurrency;
+      }
+
+      // 内存大小（只有部分浏览器支持）
+      if (navigator.deviceMemory) {
+        hardware.memory = navigator.deviceMemory + ' GB';
+      }
+
+      return hardware;
+    },
+
+    // ================ 特性支持检测 ================
+    detectFeatureSupport: function() {
+      var features = {
         // Vue3 核心依赖
+        es6: {},
+        es2016: {},
+        es2017: {},
+
+        // CSS 特性
+        css: {},
+
+        // Web APIs
+        webgl: this.testWebGLSupport(),
+        serviceWorker: 'serviceWorker' in navigator,
+        localStorage: 'localStorage' in window,
+        sessionStorage: 'sessionStorage' in window,
+        indexDB: 'indexedDB' in window
+      };
+
+      // ES6 特性
+      features.es6 = {
         proxy: typeof Proxy !== 'undefined',
         reflect: typeof Reflect !== 'undefined',
         promise: typeof Promise !== 'undefined',
         symbol: typeof Symbol !== 'undefined',
-
-        // ES6+ 特性
-        arrowFunctions: (function() {
-          try { eval('var fn = () => {}'); return true; }
-          catch(e) { return false; }
-        })(),
-        templateLiterals: (function() {
-          try { eval('var str = `template`'); return true; }
-          catch(e) { return false; }
-        })()
+        map: typeof Map !== 'undefined',
+        set: typeof Set !== 'undefined',
+        weakMap: typeof WeakMap !== 'undefined',
+        weakSet: typeof WeakSet !== 'undefined',
+        arrowFunctions: this.testArrowFunctions(),
+        templateLiterals: this.testTemplateLiterals(),
+        letConst: this.testLetConst(),
+        classes: this.testClassSupport(),
+        defaultParams: this.testDefaultParameters(),
+        restParams: this.testRestParameters(),
+        spread: this.testSpreadOperator(),
+        destructuring: this.testDestructuring()
       };
+
+      // CSS 特性（基础检测）
+      features.css = {
+        flexbox: this.testCSSFeature('display', 'flex'),
+        grid: this.testCSSFeature('display', 'grid'),
+        cssVariables: this.testCSSVariables(),
+        transform: this.testCSSFeature('transform', 'translate(10px)'),
+        transition: this.testCSSFeature('transition', 'all 0.3s')
+      };
+
+      return features;
     },
 
-    // 分析兼容性
+    // ================ 测试辅助函数 ================
+    testES6Support: function() {
+      try {
+        // 测试几个关键的 ES6 特性
+        eval('let x = 1; const y = 2; class Test {};');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testES2016Support: function() {
+      try {
+        eval('2 ** 3;'); // 指数运算符
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testES2017Support: function() {
+      try {
+        eval('async function test() {}');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testArrowFunctions: function() {
+      try {
+        eval('var fn = () => {}');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testTemplateLiterals: function() {
+      try {
+        eval('var str = `template`');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testLetConst: function() {
+      try {
+        eval('let testLet = 1; const testConst = 2;');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testClassSupport: function() {
+      try {
+        eval('class TestClass { constructor() {} }');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testDefaultParameters: function() {
+      try {
+        eval('function test(a = 1) { return a; }');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testRestParameters: function() {
+      try {
+        eval('function test(...args) { return args; }');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testSpreadOperator: function() {
+      try {
+        eval('var arr = [...[1,2,3]]');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testDestructuring: function() {
+      try {
+        eval('var {a, b} = {a: 1, b: 2}');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testWebGLSupport: function() {
+      try {
+        var canvas = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testCSSFeature: function(property, value) {
+      try {
+        var el = document.createElement('div');
+        el.style[property] = value;
+        return el.style[property] !== '';
+      } catch (e) {
+        return false;
+      }
+    },
+
+    testCSSVariables: function() {
+      try {
+        var el = document.createElement('div');
+        el.style.setProperty('--test-var', 'red');
+        return el.style.getPropertyValue('--test-var') === 'red';
+      } catch (e) {
+        return false;
+      }
+    },
+
+    // ================ 兼容性分析 ================
     analyzeCompatibility: function() {
-      console.log('分析兼容性...');
+      var browser = this.results.browser;
+      var features = this.results.features.es6;
+      var issues = [];
 
-      var features = this.results.features;
-      var allCoreSupported = features.proxy &&
-        features.reflect &&
-        features.promise &&
-        features.symbol;
-
-      if (allCoreSupported) {
-        this.results.compatibility = '完全兼容';
-        this.results.compatibilityLevel = 'compatible';
-      } else {
-        this.results.compatibility = '不兼容';
-        this.results.compatibilityLevel = 'incompatible';
+      // 1. 检查浏览器类型
+      if (browser.isIE) {
+        issues.push('Internet Explorer 不支持 Vue3');
       }
 
-      // 收集不兼容的原因
-      this.results.issues = [];
-      if (!features.proxy) this.results.issues.push('不支持 Proxy API');
-      if (!features.reflect) this.results.issues.push('不支持 Reflect API');
-      if (!features.promise) this.results.issues.push('不支持 Promise');
-      if (!features.symbol) this.results.issues.push('不支持 Symbol');
+      if (browser.isEdgeLegacy) {
+        issues.push('Edge (Legacy) 不支持 Vue3，请升级到 Edge (Chromium)');
+      }
+
+      // 2. 检查浏览器版本
+      if (browser.name !== 'Unknown' && browser.version) {
+        var browserKey = browser.name.toLowerCase();
+        if (browserKey.indexOf('chrome') > -1) browserKey = 'chrome';
+        if (browserKey.indexOf('firefox') > -1) browserKey = 'firefox';
+        if (browserKey.indexOf('safari') > -1) browserKey = 'safari';
+        if (browserKey.indexOf('edge') > -1) browserKey = 'edge';
+        if (browserKey.indexOf('opera') > -1) browserKey = 'opera';
+
+        var minVersion = VUE3_REQUIREMENTS.browsers[browserKey];
+        if (minVersion && browser.version < minVersion) {
+          issues.push(browser.name + ' 版本过低 (当前: ' + browser.version + ', 要求: ≥' + minVersion + ')');
+        }
+      }
+
+      // 3. 检查必需特性
+      for (var i = 0; i < VUE3_REQUIREMENTS.requiredFeatures.length; i++) {
+        var feature = VUE3_REQUIREMENTS.requiredFeatures[i].toLowerCase();
+        if (!features[feature]) {
+          issues.push('不支持 ' + VUE3_REQUIREMENTS.requiredFeatures[i] + ' API');
+        }
+      }
+
+      // 4. 确定兼容性等级
+      if (issues.length === 0) {
+        this.results.compatibility.level = 'compatible';
+        this.results.compatibility.description = '完全兼容';
+      } else {
+        // 判断是否为核心问题
+        var criticalIssues = issues.filter(function(issue) {
+          return issue.indexOf('不支持') > -1 ||
+            issue.indexOf('Internet Explorer') > -1 ||
+            issue.indexOf('Edge (Legacy)') > -1;
+        });
+
+        if (criticalIssues.length > 0) {
+          this.results.compatibility.level = 'incompatible';
+          this.results.compatibility.description = '不兼容';
+        } else {
+          this.results.compatibility.level = 'partial';
+          this.results.compatibility.description = '部分兼容';
+        }
+      }
+
+      this.results.compatibility.issues = issues;
     },
 
-    // 显示结果
+    // ================ 显示相关 ================
+    showLoading: function(show) {
+      var loadingEl = document.getElementById('loading');
+      var resultEl = document.getElementById('result');
+
+      if (loadingEl && resultEl) {
+        loadingEl.style.display = show ? 'block' : 'none';
+        resultEl.style.display = show ? 'none' : 'block';
+      }
+    },
+
+    showError: function(message) {
+      var html = '<div class="error">';
+      html += '<h3 style="color: red;">检测失败</h3>';
+      html += '<p>' + (message || '未知错误') + '</p>';
+      html += '<button onclick="location.reload()">刷新重试</button>';
+      html += '</div>';
+
+      document.getElementById('result').innerHTML = html;
+      this.showLoading(false);
+    },
+
+    // 显示结果（下一部分实现）
     displayResults: function() {
-      console.log('显示检测结果...');
+      // 这个函数我们稍后实现
+      var html = '<h2>检测完成！</h2>';
+      html += '<p>浏览器: ' + this.results.browser.name + ' ' + this.results.browser.version + '</p>';
+      html += '<p>系统: ' + this.results.os.name + ' ' + this.results.os.version + '</p>';
+      html += '<p>兼容性: <strong>' + this.results.compatibility.description + '</strong></p>';
 
-      var result = this.results;
-      var html = '';
-
-      // 兼容性结论
-      html += '<div class="result-item">';
-      html += '<div class="result-title">兼容性结论</div>';
-      html += '<div class="result-content">';
-      html += '<h2 class="' + result.compatibilityLevel + '">';
-      html += result.compatibility;
-      html += '</h2>';
-
-      if (result.issues && result.issues.length > 0) {
-        html += '<p>检测到以下问题：</p><ul>';
-        for (var i = 0; i < result.issues.length; i++) {
-          html += '<li>' + result.issues[i] + '</li>';
+      if (this.results.compatibility.issues.length > 0) {
+        html += '<p>问题：</p><ul>';
+        for (var i = 0; i < this.results.compatibility.issues.length; i++) {
+          html += '<li>' + this.results.compatibility.issues[i] + '</li>';
         }
         html += '</ul>';
-      } else {
-        html += '<p>🎉 您的浏览器完全支持 Vue3！</p>';
       }
-      html += '</div></div>';
 
-      // 浏览器信息
-      html += '<div class="result-item">';
-      html += '<div class="result-title">浏览器信息</div>';
-      html += '<div class="result-content">';
-      html += '<p>User Agent: ' + result.browser.userAgent + '</p>';
-      html += '<p>平台: ' + result.browser.platform + '</p>';
-      html += '<p>语言: ' + result.browser.language + '</p>';
-      html += '</div></div>';
-
-      // 特性支持详情
-      html += '<div class="result-item">';
-      html += '<div class="result-title">特性支持详情</div>';
-      html += '<div class="result-content">';
-      for (var key in result.features) {
-        if (result.features.hasOwnProperty(key)) {
-          var supported = result.features[key] ? '✅ 支持' : '❌ 不支持';
-          html += '<p>' + key + ': ' + supported + '</p>';
-        }
-      }
-      html += '</div></div>';
-
-      // 将HTML插入到页面
       document.getElementById('result').innerHTML = html;
-
-      // 绑定重新检测按钮事件
       this.bindEvents();
     },
 
-    // 绑定按钮事件
     bindEvents: function() {
       var self = this;
       var recheckBtn = document.getElementById('recheck-btn');
@@ -167,14 +582,6 @@
       if (recheckBtn) {
         recheckBtn.onclick = function() {
           self.runDetection();
-        };
-      }
-
-      // 导出按钮（下一阶段实现）
-      var exportBtn = document.getElementById('export-btn');
-      if (exportBtn) {
-        exportBtn.onclick = function() {
-          alert('导出功能将在下一阶段实现');
         };
       }
     }
