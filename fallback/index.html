@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="GBK">  <!-- 兼容IE -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue3 兼容性检测（基础版）</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <h1>🔍 Vue3 兼容性检测工具</h1>
+  <p class="subtitle">正在分析您的浏览器环境...</p>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>检测中，请稍候...</p>
+  </div>
+
+  <div id="result" style="display:none;">
+    <!-- 结果会动态填充到这里 -->
+  </div>
+
+  <div class="actions">
+    <button id="recheck-btn" class="btn">重新检测</button>
+    <button id="export-btn" class="btn">导出结果</button>
+  </div>
+
+  <div class="footer">
+    <p>此页面用于检测您的浏览器是否支持运行 Vue3 开发的网页应用</p>
+  </div>
+</div>
+
+<!-- 引入检测脚本 -->
+<script src="detect.js"></script>
+<script>
+  // 页面加载完成后开始检测
+  window.onload = function() {
+    // 调用检测函数
+    window.Vue3Detector.runDetection();
+  };
+</script>
+</body>
+</html>
