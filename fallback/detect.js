@@ -534,9 +534,30 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     },
+    // ================ 更新页面副标题 ================
+    updateSubtitle: function() {
+      var subtitleEl = document.getElementById('subtitle');
+      if (!subtitleEl) return;
 
+      var level = this.results.compatibility.level;
+      var texts = {
+        'compatible': '✅ 检测完成：完全兼容 Vue3',
+        'partial': '⚠️ 检测完成：部分兼容 Vue3',
+        'incompatible': '❌ 检测完成：不兼容 Vue3'
+      };
+
+      subtitleEl.textContent = texts[level] || '检测完成';
+
+      // 移除旧的状态类
+      subtitleEl.classList.remove('compatible', 'partial', 'incompatible');
+      // 添加新的状态类
+      subtitleEl.classList.add(level);
+    },
     // ================ 显示完整结果 ================
     displayResults: function () {
+      // 更新副标题
+      this.updateSubtitle();
+
       var results = this.results;
       var suggestions = this.generateSuggestions();
 
