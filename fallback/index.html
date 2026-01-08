@@ -6,7 +6,7 @@
   <!-- 兼容 IE 的模式声明 -->
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vue3 兼容性检测（基础版）</title>
+  <title>Vue3 兼容性检测</title>
   <link rel="stylesheet" href="style.css">
   <style>
     /* 临时内联一些关键样式，确保CSS文件加载失败时也有基本样式 */
@@ -40,7 +40,13 @@
 
   <div class="actions">
     <button id="recheck-btn" class="btn">重新检测</button>
-    <button id="export-btn" class="btn">导出结果</button>
+    <div class="export-dropdown">
+      <button id="export-btn" class="btn">导出结果 ↓</button>
+      <div class="export-options">
+        <button id="export-json-btn" class="export-option">导出为 JSON</button>
+        <button id="export-html-btn" class="export-option">导出为 HTML 报告</button>
+      </div>
+    </div>
   </div>
 
   <div class="footer">
