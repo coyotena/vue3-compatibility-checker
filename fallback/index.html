@@ -1,11 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="GBK">  <!-- 兼容IE -->
+  <!-- 使用 UTF-8 编码 -->
+  <meta charset="UTF-8">
+  <!-- 兼容 IE 的模式声明 -->
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vue3 兼容性检测（基础版）</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* 临时内联一些关键样式，确保CSS文件加载失败时也有基本样式 */
+    body {
+      font-family: "Microsoft YaHei", Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+  </style>
 </head>
 <body>
 <div class="container">
@@ -37,7 +54,14 @@
   // 页面加载完成后开始检测
   window.onload = function() {
     // 调用检测函数
-    window.Vue3Detector.runDetection();
+    if (window.Vue3Detector && window.Vue3Detector.runDetection) {
+      window.Vue3Detector.runDetection();
+    } else {
+      document.getElementById('result').innerHTML =
+        '<p style="color: red;">检测脚本加载失败，请刷新页面重试。</p>';
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('result').style.display = 'block';
+    }
   };
 </script>
 </body>
