@@ -525,6 +525,16 @@
       this.showLoading(false);
     },
 
+    escapeHtml: function(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    },
+
     // ================ 显示完整结果 ================
     displayResults: function () {
       var results = this.results;
@@ -554,7 +564,14 @@
 
       html += '<tr><td>渲染引擎</td><td>' + results.browser.engine + '</td><td>✅</td></tr>';
 
-      html += '<tr><td>User Agent</td><td class="mono">' + (results.browser.userAgent.length > 50 ? results.browser.userAgent.substring(0, 50) + '...' : results.browser.userAgent) + '</td><td>📝</td></tr>';
+      html += '<tr><td>User Agent</td>';
+      html += '<td class="mono" title="' + this.escapeHtml(results.browser.userAgent) + '">';
+      if (results.browser.userAgent.length > 50) {
+        html += results.browser.userAgent.substring(0, 50) + '...';
+      } else {
+        html += results.browser.userAgent;
+      }
+      html += '</td><td>📝</td></tr>';
 
       // 操作系统
       html += '<tr><td rowspan="3">操作系统</td>';
