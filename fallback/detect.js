@@ -1782,11 +1782,16 @@
       var container = document.getElementById('qrcode-container');
       container.innerHTML = '<p>正在生成二维码...</p>';
 
-      // 简单的二维码生成（字符画方式，兼容性好）
-      setTimeout(function() {
-        try {
-          // 如果有 QRCode.js 库则使用，否则显示链接
-          if (typeof QRCode !== 'undefined') {
+      // 检查浏览器是否支持 canvas（QRCode.js 需要）
+      var hasCanvasSupport = !!document.createElement('canvas').getContext;
+
+      // 检查 QRCode 库是否加载成功
+      var hasQRCodeLib = typeof QRCode !== 'undefined';
+
+      if (hasCanvasSupport && hasQRCodeLib) {
+        // 使用 QRCode.js 生成二维码
+        setTimeout(function() {
+          try {
             container.innerHTML = '';
             new QRCode(container, {
               text: url,
@@ -1796,19 +1801,30 @@
               colorLight: '#ffffff',
               correctLevel: QRCode.CorrectLevel.H
             });
-          } else {
-            // 简单回退：显示链接和说明
-            container.innerHTML = '<div class="qrcode-fallback">' +
-              '<p><strong>二维码生成需要 QRCode.js 库</strong></p>' +
-              '<p>请直接复制上方链接分享</p>' +
-              '<p><small>或引入 QRCode.js 库以生成二维码</small></p>' +
-              '</div>';
+          } catch (error) {
+            self.showQRCodeFallback(container, url, error);
           }
-        } catch (error) {
-          container.innerHTML = '<p>二维码生成失败: ' + error.message + '</p>' +
-            '<p>请使用分享链接</p>';
-        }
-      }, 100);
+        }, 100);
+      } else {
+        // 显示回退方案
+        this.showQRCodeFallback(container, url);
+      }
+    },
+
+    // 二维码生成失败时的回退显示
+    showQRCodeFallback: function(container, url, error) {
+      var errorMsg = error ? '<p><small>错误: ' + this.escapeHtml(error.message) + '</small></p>' : '';
+
+      container.innerHTML = '<div class="qrcode-fallback">' +
+        '<p><strong>⚠️ 二维码生成受限</strong></p>' +
+        '<p>您的浏览器环境不支持二维码生成，请使用以下替代方式：</p>' +
+        '<div class="fallback-link">' +
+        '<p><strong>分享链接：</strong></p>' +
+        '<p class="mono-link">' + this.escapeHtml(url.substring(0, 50)) + '...</p>' +
+        '</div>' +
+        '<p><small>提示：您可以直接复制上方的分享链接</small></p>' +
+        errorMsg +
+        '</div>';
     },
 
     // 复制链接到剪贴板

@@ -623,3 +623,26 @@ h1 {
   display: none;
   animation: slideIn 0.3s ease-out;
 }
+/* 二维码回退样式 */
+.qrcode-fallback {
+  text-align: center;
+  padding: 15px;
+}
+
+.qrcode-fallback p {
+  margin: 8px 0;
+}
+
+.fallback-link {
+  background-color: #f0f0f0;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 15px 0;
+}
+
+.mono-link {
+  font-family: monospace;
+  font-size: 12px;
+  word-break: break-all;
+  color: #42b883;
+}
