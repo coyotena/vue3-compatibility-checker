@@ -293,6 +293,143 @@
     }
   }
 
+  /* ==============================================
+   IE8 兼容性修复 - 基础polyfill
+   ============================================== */
+
+// 1. 修复 Array.prototype 方法（ES5 polyfill）
+  if (!Array.prototype.forEach) {
+    Array.prototype.forEach = function(callback, thisArg) {
+      var T, k;
+      if (this == null) {
+        throw new TypeError(' this is null or not defined');
+      }
+      var O = Object(this);
+      var len = O.length >>> 0;
+      if (typeof callback !== "function") {
+        throw new TypeError(callback + ' is not a function');
+      }
+      if (arguments.length > 1) {
+        T = thisArg;
+      }
+      k = 0;
+      while (k < len) {
+        var kValue;
+        if (k in O) {
+          kValue = O[k];
+          callback.call(T, kValue, k, O);
+        }
+        k++;
+      }
+    };
+  }
+
+// 2. 修复 Date.now()（IE8不支持）
+  if (!Date.now) {
+    Date.now = function() {
+      return new Date().getTime();
+    };
+  }
+
+// 3. 修复 Object.keys()（IE8不支持）
+  if (!Object.keys) {
+    Object.keys = (function() {
+      var hasOwnProperty = Object.prototype.hasOwnProperty,
+        hasDontEnumBug = !({ toString: null }).propertyIsEnumerable('toString'),
+        dontEnums = [
+          'toString',
+          'toLocaleString',
+          'valueOf',
+          'hasOwnProperty',
+          'isPrototypeOf',
+          'propertyIsEnumerable',
+          'constructor'
+        ],
+        dontEnumsLength = dontEnums.length;
+
+      return function(obj) {
+        if (typeof obj !== 'object' && (typeof obj !== 'function' || obj === null)) {
+          throw new TypeError('Object.keys called on non-object');
+        }
+
+        var result = [], prop, i;
+
+        for (prop in obj) {
+          if (hasOwnProperty.call(obj, prop)) {
+            result.push(prop);
+          }
+        }
+
+        if (hasDontEnumBug) {
+          for (i = 0; i < dontEnumsLength; i++) {
+            if (hasOwnProperty.call(obj, dontEnums[i])) {
+              result.push(dontEnums[i]);
+            }
+          }
+        }
+        return result;
+      };
+    }());
+  }
+
+// 4. 修复 Function.prototype.bind（IE8不支持）
+  if (!Function.prototype.bind) {
+    Function.prototype.bind = function(oThis) {
+      if (typeof this !== 'function') {
+        throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+      }
+
+      var aArgs = Array.prototype.slice.call(arguments, 1),
+        fToBind = this,
+        fNOP = function() {},
+        fBound = function() {
+          return fToBind.apply(
+            this instanceof fNOP && oThis ? this : oThis,
+            aArgs.concat(Array.prototype.slice.call(arguments))
+          );
+        };
+
+      fNOP.prototype = this.prototype;
+      fBound.prototype = new fNOP();
+
+      return fBound;
+    };
+  }
+
+// 5. 修复 console 对象（IE8可能没有console）
+  if (typeof console === 'undefined') {
+    window.console = {
+      log: function() {},
+      error: function() {},
+      warn: function() {},
+      info: function() {}
+    };
+  }
+
+// 6. 修复 addEventListener/removeEventListener
+  if (!document.addEventListener) {
+    // 我们已经有了自己的 addEvent 函数，这里确保它可用
+    if (!window.addEvent) {
+      window.addEvent = function(element, eventName, handler) {
+        if (element.attachEvent) {
+          element.attachEvent('on' + eventName, handler);
+        } else {
+          element['on' + eventName] = handler;
+        }
+      };
+    }
+
+    if (!window.removeEvent) {
+      window.removeEvent = function(element, eventName, handler) {
+        if (element.detachEvent) {
+          element.detachEvent('on' + eventName, handler);
+        } else {
+          element['on' + eventName] = null;
+        }
+      };
+    }
+  }
+
   // 全局对象
   var Vue3Detector = {
     get results() {
