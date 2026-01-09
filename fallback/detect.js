@@ -1701,6 +1701,179 @@
       return actions;
     },
 
+    // ================ 分享功能 ================
+    // 生成分享数据
+    generateShareData: function() {
+      // 创建精简的分享数据（避免太大）
+      var shareData = {
+        v: '1.0', // 版本
+        t: new Date().getTime(), // 时间戳
+        c: this.results.compatibility.level, // 兼容性级别
+        b: {
+          n: this.results.browser.name,
+          v: this.results.browser.version,
+          e: this.results.browser.engine
+        },
+        o: {
+          n: this.results.os.name,
+          v: this.results.os.version
+        },
+        f: {
+          p: this.results.features.es6.proxy,
+          r: this.results.features.es6.reflect
+        }
+      };
+
+      // 转换为 Base64 编码的字符串
+      var jsonStr = JSON.stringify(shareData);
+      var base64Str = btoa(encodeURIComponent(jsonStr));
+
+      // 生成分享 ID（短版本）
+      var shareId = this.generateShareId();
+
+      return {
+        data: shareData,
+        base64: base64Str,
+        id: shareId,
+        url: this.generateShareUrl(base64Str, shareId)
+      };
+    },
+
+    // 生成分享 ID（6位字母数字）
+    generateShareId: function() {
+      var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      var id = '';
+      for (var i = 0; i < 6; i++) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return id;
+    },
+
+    // 生成分享链接
+    generateShareUrl: function(base64Data, shareId) {
+      var baseUrl = window.location.href.split('?')[0];
+      return baseUrl + '?share=' + base64Data + '&id=' + shareId;
+    },
+
+    // 打开分享模态框
+    openShareModal: function() {
+      if (!this.results || !this.results.detectionTime) {
+        showExportFeedback('❌ 请先完成检测', 'error');
+        return;
+      }
+
+      var shareData = this.generateShareData();
+
+      // 更新模态框内容
+      document.getElementById('share-link-input').value = shareData.url;
+      document.getElementById('share-id').textContent = shareData.id;
+
+      // 生成二维码
+      this.generateQRCode(shareData.url);
+
+      // 显示模态框
+      document.getElementById('share-modal').style.display = 'flex';
+
+      console.log('分享数据已生成:', shareData);
+    },
+
+    // 生成二维码（简单实现，如果可用则使用，否则显示提示）
+    generateQRCode: function(url) {
+      var container = document.getElementById('qrcode-container');
+      container.innerHTML = '<p>正在生成二维码...</p>';
+
+      // 简单的二维码生成（字符画方式，兼容性好）
+      setTimeout(function() {
+        try {
+          // 如果有 QRCode.js 库则使用，否则显示链接
+          if (typeof QRCode !== 'undefined') {
+            container.innerHTML = '';
+            new QRCode(container, {
+              text: url,
+              width: 180,
+              height: 180,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          } else {
+            // 简单回退：显示链接和说明
+            container.innerHTML = '<div class="qrcode-fallback">' +
+              '<p><strong>二维码生成需要 QRCode.js 库</strong></p>' +
+              '<p>请直接复制上方链接分享</p>' +
+              '<p><small>或引入 QRCode.js 库以生成二维码</small></p>' +
+              '</div>';
+          }
+        } catch (error) {
+          container.innerHTML = '<p>二维码生成失败: ' + error.message + '</p>' +
+            '<p>请使用分享链接</p>';
+        }
+      }, 100);
+    },
+
+    // 复制链接到剪贴板
+    copyShareLink: function() {
+      var input = document.getElementById('share-link-input');
+      var copyBtn = document.getElementById('copy-link-btn');
+
+      try {
+        input.select();
+        input.setSelectionRange(0, 99999); // 移动设备支持
+
+        var success = document.execCommand('copy');
+
+        if (success) {
+          // 显示成功反馈
+          var originalText = copyBtn.textContent;
+          copyBtn.textContent = '✅ 已复制';
+          copyBtn.classList.add('copied');
+
+          // 3秒后恢复
+          setTimeout(function() {
+            copyBtn.textContent = originalText;
+            copyBtn.classList.remove('copied');
+          }, 3000);
+
+          showExportFeedback('✅ 链接已复制到剪贴板', 'success');
+        } else {
+          showExportFeedback('❌ 复制失败，请手动复制', 'error');
+        }
+      } catch (error) {
+        console.error('复制失败:', error);
+        showExportFeedback('❌ 复制失败: ' + error.message, 'error');
+      }
+    },
+
+    // 关闭分享模态框
+    closeShareModal: function() {
+      document.getElementById('share-modal').style.display = 'none';
+    },
+
+    // 解析分享链接（从URL参数中读取分享数据）
+    parseShareFromUrl: function() {
+      var urlParams = new URLSearchParams(window.location.search);
+      var shareData = urlParams.get('share');
+      var shareId = urlParams.get('id');
+
+      if (shareData && shareId) {
+        try {
+          // 解码 Base64
+          var jsonStr = decodeURIComponent(atob(shareData));
+          var data = JSON.parse(jsonStr);
+
+          console.log('从URL加载分享数据:', data);
+
+          // 这里可以添加逻辑来显示分享的数据
+          // 例如：显示"这是来自分享的检测结果"
+          return data;
+        } catch (error) {
+          console.error('解析分享数据失败:', error);
+          return null;
+        }
+      }
+
+      return null;
+    },
     bindEvents: function() {
       var self = this;
 
@@ -1736,18 +1909,59 @@
         };
       }
 
-      // 旧导出按钮（兼容性）
-      var exportBtn = document.getElementById('export-btn');
-      if (exportBtn && !exportBtn.onclick) {
-        exportBtn.onclick = function() {
-          // 默认导出 JSON
-          if (self.results && self.results.detectionTime) {
-            self.exportAsJSON();
-          } else {
-            showExportFeedback('❌ 请先完成检测', 'error');
+      // 分享按钮
+      var shareBtn = document.getElementById('share-btn');
+      if (shareBtn) {
+        shareBtn.onclick = function() {
+          self.openShareModal();
+        };
+      }
+
+      // 复制链接按钮
+      var copyLinkBtn = document.getElementById('copy-link-btn');
+      if (copyLinkBtn) {
+        copyLinkBtn.onclick = function() {
+          self.copyShareLink();
+        };
+      }
+
+      // 关闭模态框按钮
+      var closeModalBtn = document.getElementById('close-share-modal');
+      if (closeModalBtn) {
+        closeModalBtn.onclick = function() {
+          self.closeShareModal();
+        };
+      }
+
+      // 点击模态框外部关闭
+      var modal = document.getElementById('share-modal');
+      if (modal) {
+        modal.onclick = function(event) {
+          if (event.target === modal) {
+            self.closeShareModal();
           }
         };
       }
+
+      // 页面加载时检查是否有分享链接
+      window.onload = function() {
+        var sharedData = self.parseShareFromUrl();
+        if (sharedData) {
+          // 可以在这里显示分享的数据
+          console.log('检测到分享链接，数据:', sharedData);
+          // 可以添加一个提示，比如："正在查看分享的检测结果"
+        }
+
+        // 原有的检测逻辑
+        if (window.Vue3Detector && window.Vue3Detector.runDetection) {
+          window.Vue3Detector.runDetection();
+        } else {
+          document.getElementById('result').innerHTML =
+            '<p style="color: red;">检测脚本加载失败，请刷新页面重试。</p>';
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('result').style.display = 'block';
+        }
+      };
     },
   };
 

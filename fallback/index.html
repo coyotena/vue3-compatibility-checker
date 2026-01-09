@@ -47,13 +47,52 @@
         <button id="export-html-btn" class="export-option">导出为 HTML 报告</button>
       </div>
     </div>
+    <button id="share-btn" class="btn">分享结果</button>
   </div>
 
   <div class="footer">
     <p>此页面用于检测您的浏览器是否支持运行 Vue3 开发的网页应用</p>
   </div>
 </div>
+<div id="share-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>📤 分享检测结果</h3>
+      <button id="close-share-modal" class="close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="share-option">
+        <h4>🔗 分享链接</h4>
+        <div class="share-link-container">
+          <input type="text" id="share-link-input" readonly class="share-link-input">
+          <button id="copy-link-btn" class="copy-btn">复制</button>
+        </div>
+        <p class="help-text">将此链接发送给他人，他们可以看到您的检测结果</p>
+      </div>
 
+      <div class="share-option">
+        <h4>📱 二维码</h4>
+        <div id="qrcode-container" class="qrcode-container">
+          <p>正在生成二维码...</p>
+        </div>
+        <p class="help-text">使用手机扫描查看结果</p>
+      </div>
+
+      <div class="share-option">
+        <h4>💾 保存结果</h4>
+        <p>检测结果已保存，有效期为 7 天。</p>
+        <p class="share-id">分享 ID: <span id="share-id"></span></p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="disclaimer">
+        <small>⚠️ 注意：分享链接包含您的浏览器环境信息，不包含个人隐私数据。</small>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
 <!-- 引入检测脚本 -->
 <script src="detect.js"></script>
 <script>
