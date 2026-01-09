@@ -1162,14 +1162,23 @@
     },
 
     escapeHtml: function(text) {
-      if (!text) return '';
-      return text
+      // 处理各种类型的输入
+      if (text === null || text === undefined) {
+        return '';
+      }
+
+      // 转换为字符串
+      var str = String(text);
+
+      // 转义 HTML 特殊字符
+      return str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     },
+
     // ================ 更新页面副标题 ================
     updateSubtitle: function() {
       var subtitleEl = document.getElementById('subtitle');
