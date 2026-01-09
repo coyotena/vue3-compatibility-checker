@@ -18,9 +18,6 @@
     // 必需的 ES6+ 特性
     requiredFeatures: ['Proxy', 'Reflect', 'Promise', 'Symbol', 'Map', 'Set', 'WeakMap', 'WeakSet'],
   };
-  // ==============================================
-  // 导出功能辅助函数
-  // ==============================================
 
   // 显示导出反馈提示
   function showExportFeedback(message, type) {
@@ -1834,145 +1831,10 @@
       html += '<h2>检测结果: ' + results.compatibility.description + '</h2>';
       html += '<p>检测时间: ' + results.detectionTime + '</p>';
       html += '</div>';
-      // 在环境信息汇总表格后面添加特性支持详情
-      html += '<div class="features-section">';
-      html += '<h3>⚙️ 特性支持详情</h3>';
 
-      // ===== Vue3 核心特性表格 =====
-      html += '<div class="feature-category">';
-      html += '<h4>Vue3 核心依赖特性</h4>';
-      html += '<table class="feature-table">';
-      html += '<tr><th>特性</th><th>支持情况</th><th>重要性</th></tr>';
+      // 4. 🔥 关键修改：特性支持详情改为折叠面板
+      html += this.buildFeaturesCollapsible(); // 新增函数
 
-      // 必需特性
-      var coreFeatures = [
-        { key: 'proxy', name: 'Proxy API', desc: 'Vue3 响应式系统核心', required: true },
-        { key: 'reflect', name: 'Reflect API', desc: '响应式辅助', required: true },
-        { key: 'promise', name: 'Promise', desc: '异步组件、组合式API', required: true },
-        { key: 'symbol', name: 'Symbol', desc: '内部标识、元编程', required: true },
-        { key: 'map', name: 'Map', desc: '内部数据结构', required: true },
-        { key: 'set', name: 'Set', desc: '内部数据结构', required: true }
-      ];
-
-      for (var i = 0; i < coreFeatures.length; i++) {
-        var feature = coreFeatures[i];
-        var supported = results.features.es6[feature.key];
-        html += '<tr>';
-        html += '<td><strong>' + feature.name + '</strong><br><small>' + feature.desc + '</small></td>';
-        html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
-        html += supported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '推荐') + '</td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      html += '</div>';
-
-      // ===== 重要 ES6+ 特性表格 =====
-      html += '<div class="feature-category">';
-      html += '<h4>重要 ES6+ 特性</h4>';
-      html += '<table class="feature-table">';
-      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
-
-      var importantFeatures = [
-        { key: 'objectAssign', name: 'Object.assign', desc: '选项合并、props 处理' },
-        { key: 'asyncAwait', name: 'async/await', desc: '异步编程、组合式API' },
-        { key: 'arrowFunctions', name: '箭头函数', desc: '简洁函数语法' },
-        { key: 'templateLiterals', name: '模板字符串', desc: '字符串拼接、模板' },
-        { key: 'letConst', name: 'let/const', desc: '块级作用域变量' },
-        { key: 'destructuring', name: '解构赋值', desc: '对象/数组解构' },
-        { key: 'spread', name: '扩展运算符', desc: '数组/对象展开' },
-        { key: 'arrayIncludes', name: 'Array.includes', desc: '数组包含判断' },
-        { key: 'stringIncludes', name: 'String.includes', desc: '字符串包含判断' }
-      ];
-
-      for (var j = 0; j < importantFeatures.length; j++) {
-        var impFeature = importantFeatures[j];
-        var impSupported = results.features.es6[impFeature.key];
-        html += '<tr>';
-        html += '<td><strong>' + impFeature.name + '</strong></td>';
-        html += '<td class="' + (impSupported ? 'supported' : 'not-supported') + '">';
-        html += impSupported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td><small>' + impFeature.desc + '</small></td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      html += '</div>';
-
-// ===== Web APIs 支持表格 =====
-      html += '<div class="feature-category">';
-      html += '<h4>Web API 支持</h4>';
-      html += '<table class="feature-table">';
-      html += '<tr><th>API</th><th>支持情况</th><th>版本/详情</th></tr>';
-
-      var webAPIs = [
-        { key: 'webgl', name: 'WebGL', desc: '3D 图形渲染' },
-        { key: 'fetch', name: 'Fetch API', desc: '网络请求' },
-        { key: 'localStorage', name: 'localStorage', desc: '本地存储' },
-        { key: 'serviceWorker', name: 'Service Worker', desc: '离线应用、推送' },
-        { key: 'indexDB', name: 'IndexedDB', desc: '客户端数据库' },
-        { key: 'es6Modules', name: 'ES6 模块', desc: '模块化开发' },
-        { key: 'intersectionObserver', name: 'IntersectionObserver', desc: '元素可见性监听' },
-        { key: 'mutationObserver', name: 'MutationObserver', desc: 'DOM 变化监听' }
-      ];
-
-      for (var k = 0; k < webAPIs.length; k++) {
-        var api = webAPIs[k];
-        var apiSupported = results.features.webAPIs[api.key];
-        var versionInfo = '';
-
-        if (api.key === 'webgl' && apiSupported) {
-          versionInfo = '<small>' + this.escapeHtml(results.features.webAPIs.webglVersion) + '</small>';
-        }
-
-        html += '<tr>';
-        html += '<td><strong>' + api.name + '</strong><br><small>' + api.desc + '</small></td>';
-        html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">';
-        html += apiSupported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td>' + versionInfo + '</td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      html += '</div>';
-
-      // ===== CSS 特性支持表格 =====
-      html += '<div class="feature-category">';
-      html += '<h4>CSS 特性支持</h4>';
-      html += '<table class="feature-table">';
-      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
-
-      var cssFeatures = [
-        { key: 'flexbox', name: 'Flexbox', desc: '弹性布局' },
-        { key: 'grid', name: 'CSS Grid', desc: '网格布局' },
-        { key: 'cssVariables', name: 'CSS 变量', desc: '自定义属性、主题' },
-        { key: 'transform', name: 'Transform', desc: '元素变换' },
-        { key: 'transition', name: 'Transition', desc: '过渡动画' },
-        { key: 'animation', name: 'Animation', desc: '关键帧动画' },
-        { key: 'calc', name: 'calc()', desc: '动态计算值' },
-        { key: 'filter', name: 'Filter', desc: '滤镜效果' }
-      ];
-
-      for (var c = 0; c < cssFeatures.length; c++) {
-        var cssFeature = cssFeatures[c];
-        var cssSupported = results.features.css[cssFeature.key];
-        html += '<tr>';
-        html += '<td><strong>' + cssFeature.name + '</strong></td>';
-        html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">';
-        html += cssSupported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td><small>' + cssFeature.desc + '</small></td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      html += '</div>';
-
-      html += '</div>';
       // 2. 环境信息汇总表格
       html += '<div class="info-section">';
       html += '<h3>📊 环境信息汇总</h3>';
@@ -3019,26 +2881,6 @@
           }
         });
       }
-      /*
-      // 页面加载时检查是否有分享链接
-      window.onload = function() {
-        var sharedData = self.parseShareFromUrl();
-        if (sharedData) {
-          // 可以在这里显示分享的数据
-          // 可以添加一个提示，比如："正在查看分享的检测结果"
-        }
-
-        // 原有的检测逻辑
-        if (window.Vue3Detector && window.Vue3Detector.runDetection) {
-          window.Vue3Detector.runDetection();
-        } else {
-          document.getElementById('result').innerHTML =
-            '<p style="color: red;">检测脚本加载失败，请刷新页面重试。</p>';
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('result').style.display = 'block';
-        }
-      };
-      */
     },
   };
 
