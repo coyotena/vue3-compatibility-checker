@@ -4,7 +4,7 @@
 // ==============================================
 
 ;(function () {
-  'use strict';
+
   var DataManager = {
     // 主数据存储
     _state: {
@@ -128,6 +128,27 @@
   // ==============================================
   // 导出功能辅助函数
   // ==============================================
+
+  function safeTestFeature(code) {
+    // 1. 快速IE检测
+    var ua = navigator.userAgent || '';
+    var isIE = ua.indexOf('MSIE') > -1 || ua.indexOf('Trident/') > -1;
+
+    if (isIE) {
+      // IE 绝对不支持这些 ES6+ 特性
+      return false;
+    }
+
+    // 2. 安全检测
+    try {
+      var testFunc = new Function(
+        'try { ' + code + '; return true; } catch(e) { return false; }'
+      );
+      return testFunc() === true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   // 显示导出反馈提示
   function showExportFeedback(message, type) {
@@ -1456,12 +1477,7 @@
     },
 
     testObjectSpread: function() {
-      try {
-        eval('var obj = {...{a: 1}}');
-        return true;
-      } catch (e) {
-        return false;
-      }
+      return safeTestFeature('var obj = {...{a: 1}}');
     },
 
     testAsyncIteration: function() {
@@ -1780,22 +1796,12 @@
       }
     },
 
-    testRestParameters: function () {
-      try {
-        eval('function test(...args) { return args; }');
-        return true;
-      } catch (e) {
-        return false;
-      }
+    testRestParameters: function() {
+      return safeTestFeature('function test(...args) { return args; }');
     },
 
-    testSpreadOperator: function () {
-      try {
-        eval('var arr = [...[1,2,3]]');
-        return true;
-      } catch (e) {
-        return false;
-      }
+    testSpreadOperator: function() {
+      return safeTestFeature('var arr = [...[1,2,3]]');
     },
 
     testDestructuring: function () {
