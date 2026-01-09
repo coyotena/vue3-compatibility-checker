@@ -18,6 +18,9 @@
     // 必需的 ES6+ 特性
     requiredFeatures: ['Proxy', 'Reflect', 'Promise', 'Symbol', 'Map', 'Set', 'WeakMap', 'WeakSet'],
   };
+  // ==============================================
+  // 导出功能辅助函数
+  // ==============================================
 
   // 显示导出反馈提示
   function showExportFeedback(message, type) {
@@ -187,678 +190,536 @@
   var Vue3Detector = {
     // 检测结果存储
     results: {
-      detectionTime: '',
-      compatibility: {
-        level: '', description: '', issues: [], detailedIssues: {}
-      },
-      browser: {}, os: {}, hardware: {},
-      features: {
-        // 添加检测状态标记
-        detectionStatus: {
-          coreFeatures: false,      // Vue3核心特性
-          importantFeatures: false, // 重要ES6+特性
-          webAPIs: false,           // Web API支持
-          cssFeatures: false,        // CSS特性支持
-          hardwareInfo: false        // 硬件信息（可选）
-        }
-      }
+      detectionTime: '', compatibility: {
+        level: '', // 'compatible', 'partial', 'incompatible'
+        description: '', issues: [],
+      }, browser: {}, os: {}, hardware: {}, features: {},
     },
+    // ================ 导出为 JSON 格式（修复版） ================
+    exportAsJSON: function() {
+      try {
+        // 准备导出数据 - 使用完整的新数据结构
+        var exportData = {
+          // 元数据
+          meta: {
+            tool: 'Vue3 Compatibility Detector',
+            version: '2.0',
+            generatedAt: new Date().toISOString(),
+            generatedAtLocal: new Date().toLocaleString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent
+          },
 
-    // 新增：按需检测函数
-    lazyDetect: {
-      // Vue3核心特性
-      coreFeatures: function() {
-        if (!Vue3Detector.results.features.detectionStatus.coreFeatures) {
-          console.log('懒检测：Vue3核心特性');
-          Vue3Detector.results.features.es6 = Vue3Detector.detectCoreFeatures();
-          Vue3Detector.results.features.detectionStatus.coreFeatures = true;
-        }
-        return Vue3Detector.results.features.es6;
-      },
+          // 检测结果 - 使用完整的新数据结构
+          detection: {
+            time: this.results.detectionTime,
+            compatibility: this.results.compatibility,
+            browser: this.results.browser,
+            os: this.results.os,
+            hardware: this.results.hardware,
+            features: {
+              // ES 特性
+              es6: this.results.features.es6,
+              es2016: this.results.features.es2016 || {},
+              es2017: this.results.features.es2017 || {},
+              es2018: this.results.features.es2018 || {},
 
-      // 重要ES6+特性
-      importantFeatures: function() {
-        if (!Vue3Detector.results.features.detectionStatus.importantFeatures) {
-          console.log('懒检测：重要ES6+特性');
-          Vue3Detector.results.features.es2016 = Vue3Detector.detectES2016Features();
-          Vue3Detector.results.features.es2017 = Vue3Detector.detectES2017Features();
-          Vue3Detector.results.features.es2018 = Vue3Detector.detectES2018Features();
-          Vue3Detector.results.features.detectionStatus.importantFeatures = true;
-        }
-        return {
-          es2016: Vue3Detector.results.features.es2016,
-          es2017: Vue3Detector.results.features.es2017,
-          es2018: Vue3Detector.results.features.es2018
+              // CSS 特性
+              css: this.results.features.css,
+
+              // Web APIs - 直接使用完整对象
+              webAPIs: this.results.features.webAPIs
+            }
+          },
+
+          // Vue3 兼容性要求
+          vue3Requirements: {
+            browsers: VUE3_REQUIREMENTS.browsers,
+            coreFeatures: ['Proxy', 'Reflect', 'Promise', 'Symbol', 'Map', 'Set']
+          },
+
+          // 检测到的所有问题
+          issues: {
+            all: this.results.compatibility.issues || [],
+            critical: (this.results.compatibility.detailedIssues &&
+              this.results.compatibility.detailedIssues.critical) || [],
+            warning: (this.results.compatibility.detailedIssues &&
+              this.results.compatibility.detailedIssues.warning) || [],
+            info: (this.results.compatibility.detailedIssues &&
+              this.results.compatibility.detailedIssues.info) || []
+          },
+
+          // 优化建议摘要
+          suggestions: this.generateSuggestions().map(function(suggestion) {
+            return {
+              type: suggestion.type,
+              category: suggestion.category,
+              title: suggestion.title,
+              description: suggestion.description,
+              details: suggestion.details,
+              actions: suggestion.actions || []
+            };
+          })
         };
-      },
 
-      // Web API支持
-      webAPIs: function() {
-        if (!Vue3Detector.results.features.detectionStatus.webAPIs) {
-          console.log('懒检测：Web API支持');
-          Vue3Detector.results.features.webAPIs = Vue3Detector.detectWebAPIs();
-          Vue3Detector.results.features.detectionStatus.webAPIs = true;
-        }
-        return Vue3Detector.results.features.webAPIs;
-      },
+        // 转换为格式化的 JSON 字符串
+        var jsonString = JSON.stringify(exportData, null, 2);
 
-      // CSS特性支持
-      cssFeatures: function() {
-        if (!Vue3Detector.results.features.detectionStatus.cssFeatures) {
-          console.log('懒检测：CSS特性支持');
-          Vue3Detector.results.features.css = Vue3Detector.detectCSSFeatures();
-          Vue3Detector.results.features.detectionStatus.cssFeatures = true;
+        // 生成文件名
+        var fileName = 'vue3-compatibility-' +
+          (this.results.browser.name || 'browser').toLowerCase().replace(/\s+/g, '-') + '-' +
+          new Date().getTime() + '.json';
+
+        // 下载文件
+        if (downloadFile(jsonString, fileName, 'application/json')) {
+          showExportFeedback('✅ 结果已导出为 JSON 文件', 'success');
+        } else {
+          showExportFeedback('❌ 导出失败，请重试', 'error');
         }
-        return Vue3Detector.results.features.css;
+
+      } catch (error) {
+        console.error('导出 JSON 失败:', error);
+        showExportFeedback('❌ 导出出错: ' + error.message, 'error');
       }
     },
-
-    // 分离的检测函数
-    detectCoreFeatures: function() {
-      return {
-        proxy: typeof Proxy !== 'undefined',
-        reflect: typeof Reflect !== 'undefined',
-        promise: typeof Promise !== 'undefined',
-        symbol: typeof Symbol !== 'undefined',
-        map: typeof Map !== 'undefined',
-        set: typeof Set !== 'undefined',
-        weakMap: typeof WeakMap !== 'undefined',
-        weakSet: typeof WeakSet !== 'undefined'
-      };
-    },
-
-    detectES2016Features: function() {
-      return {
-        arrayPrototypeIncludes: 'includes' in Array.prototype,
-        exponentiationOperator: this.testExponentiationOperator()
-      };
-    },
-
-    detectES2017Features: function() {
-      return {
-        objectEntries: typeof Object.entries === 'function',
-        objectValues: typeof Object.values === 'function',
-        stringPadding: 'padStart' in String.prototype && 'padEnd' in String.prototype,
-        asyncAwait: this.testAsyncAwaitSupport()
-      };
-    },
-
-    detectES2018Features: function() {
-      return {
-        objectSpread: this.testObjectSpread(),
-        promiseFinally: 'finally' in Promise.prototype,
-        asyncIteration: this.testAsyncIteration()
-      };
-    },
-
-    detectWebAPIs: function() {
-      return {
-        webgl: this.testWebGLSupport(),
-        webglVersion: this.getWebGLInfo().version,
-        fetch: 'fetch' in window,
-        localStorage: 'localStorage' in window,
-        sessionStorage: 'sessionStorage' in window,
-        serviceWorker: 'serviceWorker' in navigator,
-        indexDB: 'indexedDB' in window,
-        geolocation: 'geolocation' in navigator,
-        webWorkers: 'Worker' in window,
-        webSockets: 'WebSocket' in window,
-        intersectionObserver: 'IntersectionObserver' in window,
-        mutationObserver: 'MutationObserver' in window
-      };
-    },
-
-    detectCSSFeatures: function() {
-      return {
-        flexbox: this.testCSSFeature('display', 'flex'),
-        grid: this.testCSSFeature('display', 'grid'),
-        cssVariables: this.testCSSVariables(),
-        transform: this.testCSSFeature('transform', 'translate(10px)'),
-        transition: this.testCSSFeature('transition', 'all 0.3s'),
-        animation: this.testCSSFeature('animation', 'fadeIn 1s'),
-        calc: this.testCSSFeature('width', 'calc(100% - 20px)'),
-        filter: this.testCSSFeature('filter', 'blur(5px)')
-      };
-    },
-
-    // 特性
-    detectFeatureSupport: function() {
-      // 初始只做最基本检测
-      return {
-        es6: this.detectCoreFeatures(),
-        detectionStatus: {
-          coreFeatures: true,           // 核心特性必须立即检测
-          importantFeatures: false,     // 其他延迟
-          webAPIs: false,
-          cssFeatures: false
-        }
-      };
-    },
-      // ================ 导出为 JSON 格式（修复版） ================
-      exportAsJSON: function() {
-        try {
-          // 准备导出数据 - 使用完整的新数据结构
-          var exportData = {
-            // 元数据
-            meta: {
-              tool: 'Vue3 Compatibility Detector',
-              version: '2.0',
-              generatedAt: new Date().toISOString(),
-              generatedAtLocal: new Date().toLocaleString(),
-              url: window.location.href,
-              userAgent: navigator.userAgent
-            },
-
-            // 检测结果 - 使用完整的新数据结构
-            detection: {
-              time: this.results.detectionTime,
-              compatibility: this.results.compatibility,
-              browser: this.results.browser,
-              os: this.results.os,
-              hardware: this.results.hardware,
-              features: {
-                // ES 特性
-                es6: this.results.features.es6,
-                es2016: this.results.features.es2016 || {},
-                es2017: this.results.features.es2017 || {},
-                es2018: this.results.features.es2018 || {},
-
-                // CSS 特性
-                css: this.results.features.css,
-
-                // Web APIs - 直接使用完整对象
-                webAPIs: this.results.features.webAPIs
-              }
-            },
-
-            // Vue3 兼容性要求
-            vue3Requirements: {
-              browsers: VUE3_REQUIREMENTS.browsers,
-              coreFeatures: ['Proxy', 'Reflect', 'Promise', 'Symbol', 'Map', 'Set']
-            },
-
-            // 检测到的所有问题
-            issues: {
-              all: this.results.compatibility.issues || [],
-              critical: (this.results.compatibility.detailedIssues &&
-                this.results.compatibility.detailedIssues.critical) || [],
-              warning: (this.results.compatibility.detailedIssues &&
-                this.results.compatibility.detailedIssues.warning) || [],
-              info: (this.results.compatibility.detailedIssues &&
-                this.results.compatibility.detailedIssues.info) || []
-            },
-
-            // 优化建议摘要
-            suggestions: this.generateSuggestions().map(function(suggestion) {
-              return {
-                type: suggestion.type,
-                category: suggestion.category,
-                title: suggestion.title,
-                description: suggestion.description,
-                details: suggestion.details,
-                actions: suggestion.actions || []
-              };
-            })
-          };
-
-          // 转换为格式化的 JSON 字符串
-          var jsonString = JSON.stringify(exportData, null, 2);
-
-          // 生成文件名
-          var fileName = 'vue3-compatibility-' +
-            (this.results.browser.name || 'browser').toLowerCase().replace(/\s+/g, '-') + '-' +
-            new Date().getTime() + '.json';
-
-          // 下载文件
-          if (downloadFile(jsonString, fileName, 'application/json')) {
-            showExportFeedback('✅ 结果已导出为 JSON 文件', 'success');
-          } else {
-            showExportFeedback('❌ 导出失败，请重试', 'error');
-          }
-
-        } catch (error) {
-          console.error('导出 JSON 失败:', error);
-          showExportFeedback('❌ 导出出错: ' + error.message, 'error');
-        }
-      },
     // ================ 导出为 HTML 报告（ES5 兼容版） ================
-      // ================ 导出为 HTML 报告（修复版） ================
-      exportAsHTML: function() {
-        try {
-          var results = this.results;
-          var suggestions = this.generateSuggestions();
+    // ================ 导出为 HTML 报告（修复版） ================
+    exportAsHTML: function() {
+      try {
+        var results = this.results;
+        var suggestions = this.generateSuggestions();
 
-          // 生成状态图标
-          var statusIcon = '📊';
-          if (results.compatibility.level === 'compatible') statusIcon = '✅';
-          else if (results.compatibility.level === 'partial') statusIcon = '⚠️';
-          else if (results.compatibility.level === 'incompatible') statusIcon = '❌';
+        // 生成状态图标
+        var statusIcon = '📊';
+        if (results.compatibility.level === 'compatible') statusIcon = '✅';
+        else if (results.compatibility.level === 'partial') statusIcon = '⚠️';
+        else if (results.compatibility.level === 'incompatible') statusIcon = '❌';
 
-          // 生成问题列表 HTML
-          var issuesHTML = '';
-          if (results.compatibility.detailedIssues) {
-            var detailed = results.compatibility.detailedIssues;
+        // 生成问题列表 HTML
+        var issuesHTML = '';
+        if (results.compatibility.detailedIssues) {
+          var detailed = results.compatibility.detailedIssues;
 
-            if (detailed.critical && detailed.critical.length > 0) {
-              issuesHTML += '<h4>❌ 严重问题</h4><ul>';
-              for (var i = 0; i < detailed.critical.length; i++) {
-                issuesHTML += '<li>' + this.escapeHtml(detailed.critical[i].message) + '</li>';
-              }
-              issuesHTML += '</ul>';
+          if (detailed.critical && detailed.critical.length > 0) {
+            issuesHTML += '<h4>❌ 严重问题</h4><ul>';
+            for (var i = 0; i < detailed.critical.length; i++) {
+              issuesHTML += '<li>' + this.escapeHtml(detailed.critical[i].message) + '</li>';
             }
+            issuesHTML += '</ul>';
+          }
 
-            if (detailed.warning && detailed.warning.length > 0) {
-              issuesHTML += '<h4>⚠️ 建议优化</h4><ul>';
-              for (var j = 0; j < detailed.warning.length; j++) {
-                issuesHTML += '<li>' + this.escapeHtml(detailed.warning[j].message) + '</li>';
-              }
-              issuesHTML += '</ul>';
+          if (detailed.warning && detailed.warning.length > 0) {
+            issuesHTML += '<h4>⚠️ 建议优化</h4><ul>';
+            for (var j = 0; j < detailed.warning.length; j++) {
+              issuesHTML += '<li>' + this.escapeHtml(detailed.warning[j].message) + '</li>';
             }
+            issuesHTML += '</ul>';
           }
-
-          // 生成建议 HTML
-          var suggestionsHTML = '';
-          for (var s = 0; s < suggestions.length; s++) {
-            var suggestion = suggestions[s];
-            var actionsText = '';
-
-            if (suggestion.actions && suggestion.actions.length > 0) {
-              var actionTexts = [];
-              for (var a = 0; a < suggestion.actions.length; a++) {
-                actionTexts.push(suggestion.actions[a].text);
-              }
-              actionsText = '<p><small>建议操作: ' + actionTexts.join(', ') + '</small></p>';
-            }
-
-            suggestionsHTML += '<div class="suggestion-card ' + suggestion.type + '">' +
-              '<h3>' + this.escapeHtml(suggestion.title) + '</h3>' +
-              '<p><strong>' + this.escapeHtml(suggestion.description) + '</strong></p>' +
-              '<p>' + this.escapeHtml(suggestion.details) + '</p>' +
-              actionsText +
-              '</div>';
-          }
-
-          // ===== 生成特性支持表格 =====
-          var featuresTablesHTML = '';
-
-          // 1. Vue3 核心特性表格
-          featuresTablesHTML += '<h3>Vue3 核心依赖特性</h3>';
-          featuresTablesHTML += '<table>';
-          featuresTablesHTML += '<tr><th>特性</th><th>支持情况</th><th>重要性</th></tr>';
-
-          var coreFeatures = [
-            { key: 'proxy', name: 'Proxy API', required: true },
-            { key: 'reflect', name: 'Reflect API', required: true },
-            { key: 'promise', name: 'Promise', required: true },
-            { key: 'symbol', name: 'Symbol', required: true },
-            { key: 'map', name: 'Map', required: true },
-            { key: 'set', name: 'Set', required: true }
-          ];
-
-          for (var cf = 0; cf < coreFeatures.length; cf++) {
-            var coreFeature = coreFeatures[cf];
-            var coreSupported = results.features.es6[coreFeature.key];
-            featuresTablesHTML += '<tr>';
-            featuresTablesHTML += '<td>' + coreFeature.name + '</td>';
-            featuresTablesHTML += '<td>' + (coreSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
-            featuresTablesHTML += '<td>' + (coreFeature.required ? '<span class="required">必需</span>' : '推荐') + '</td>';
-            featuresTablesHTML += '</tr>';
-          }
-          featuresTablesHTML += '</table>';
-
-          // 2. 重要 ES6+ 特性表格
-          featuresTablesHTML += '<h3>重要 ES6+ 特性</h3>';
-          featuresTablesHTML += '<table>';
-          featuresTablesHTML += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
-
-          var importantFeatures = [
-            { key: 'asyncAwait', name: 'async/await', desc: '异步编程、组合式API' },
-            { key: 'objectAssign', name: 'Object.assign', desc: '选项合并、props 处理' },
-            { key: 'arrowFunctions', name: '箭头函数', desc: '简洁函数语法' },
-            { key: 'templateLiterals', name: '模板字符串', desc: '字符串拼接、模板' },
-            { key: 'letConst', name: 'let/const', desc: '块级作用域变量' },
-            { key: 'destructuring', name: '解构赋值', desc: '对象/数组解构' },
-            { key: 'spread', name: '扩展运算符', desc: '数组/对象展开' },
-            { key: 'arrayIncludes', name: 'Array.includes', desc: '数组包含判断' },
-            { key: 'stringIncludes', name: 'String.includes', desc: '字符串包含判断' }
-          ];
-
-          for (var imp = 0; imp < importantFeatures.length; imp++) {
-            var impFeature = importantFeatures[imp];
-            var impSupported = false;
-
-            // 特殊处理 async/await（可能在 es2017 中）
-            if (impFeature.key === 'asyncAwait') {
-              impSupported = (results.features.es2017 && results.features.es2017.asyncAwait) ||
-                results.features.es6.asyncAwait;
-            } else {
-              impSupported = results.features.es6[impFeature.key];
-            }
-
-            featuresTablesHTML += '<tr>';
-            featuresTablesHTML += '<td>' + impFeature.name + '</td>';
-            featuresTablesHTML += '<td>' + (impSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
-            featuresTablesHTML += '<td>' + impFeature.desc + '</td>';
-            featuresTablesHTML += '</tr>';
-          }
-          featuresTablesHTML += '</table>';
-
-          // 3. Web APIs 支持表格
-          featuresTablesHTML += '<h3>Web API 支持</h3>';
-          featuresTablesHTML += '<table>';
-          featuresTablesHTML += '<tr><th>API</th><th>支持情况</th><th>详情</th></tr>';
-
-          var webAPIs = [
-            { key: 'webgl', name: 'WebGL', desc: '3D 图形渲染' },
-            { key: 'fetch', name: 'Fetch API', desc: '网络请求' },
-            { key: 'localStorage', name: 'localStorage', desc: '本地存储' },
-            { key: 'serviceWorker', name: 'Service Worker', desc: '离线应用、推送' },
-            { key: 'indexDB', name: 'IndexedDB', desc: '客户端数据库' },
-            { key: 'es6Modules', name: 'ES6 模块', desc: '模块化开发' },
-            { key: 'intersectionObserver', name: 'IntersectionObserver', desc: '元素可见性监听' },
-            { key: 'mutationObserver', name: 'MutationObserver', desc: 'DOM 变化监听' }
-          ];
-
-          for (var wa = 0; wa < webAPIs.length; wa++) {
-            var api = webAPIs[wa];
-            var apiSupported = results.features.webAPIs[api.key];
-            var apiDetails = '';
-
-            if (api.key === 'webgl' && apiSupported) {
-              apiDetails = '版本: ' + this.escapeHtml(results.features.webAPIs.webglVersion || 'Unknown');
-            }
-
-            featuresTablesHTML += '<tr>';
-            featuresTablesHTML += '<td>' + api.name + '<br><small>' + api.desc + '</small></td>';
-            featuresTablesHTML += '<td>' + (apiSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
-            featuresTablesHTML += '<td>' + apiDetails + '</td>';
-            featuresTablesHTML += '</tr>';
-          }
-          featuresTablesHTML += '</table>';
-
-          // 4. CSS 特性支持表格
-          featuresTablesHTML += '<h3>CSS 特性支持</h3>';
-          featuresTablesHTML += '<table>';
-          featuresTablesHTML += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
-
-          var cssFeatures = [
-            { key: 'flexbox', name: 'Flexbox', desc: '弹性布局' },
-            { key: 'grid', name: 'CSS Grid', desc: '网格布局' },
-            { key: 'cssVariables', name: 'CSS 变量', desc: '自定义属性、主题' },
-            { key: 'transform', name: 'Transform', desc: '元素变换' },
-            { key: 'transition', name: 'Transition', desc: '过渡动画' },
-            { key: 'animation', name: 'Animation', desc: '关键帧动画' },
-            { key: 'calc', name: 'calc()', desc: '动态计算值' },
-            { key: 'filter', name: 'Filter', desc: '滤镜效果' }
-          ];
-
-          for (var css = 0; css < cssFeatures.length; css++) {
-            var cssFeature = cssFeatures[css];
-            var cssSupported = results.features.css[cssFeature.key];
-            featuresTablesHTML += '<tr>';
-            featuresTablesHTML += '<td>' + cssFeature.name + '</td>';
-            featuresTablesHTML += '<td>' + (cssSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
-            featuresTablesHTML += '<td>' + cssFeature.desc + '</td>';
-            featuresTablesHTML += '</tr>';
-          }
-          featuresTablesHTML += '</table>';
-
-          // ===== 完整的 HTML 报告 =====
-          var htmlContent = '<!DOCTYPE html>\n' +
-            '<html lang="zh-CN">\n' +
-            '<head>\n' +
-            '    <meta charset="UTF-8">\n' +
-            '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
-            '    <title>Vue3 兼容性检测报告</title>\n' +
-            '    <style>\n' +
-            '        * {\n' +
-            '            margin: 0;\n' +
-            '            padding: 0;\n' +
-            '            box-sizing: border-box;\n' +
-            '        }\n' +
-            '        \n' +
-            '        body {\n' +
-            '            font-family: "Microsoft YaHei", Arial, sans-serif;\n' +
-            '            line-height: 1.6;\n' +
-            '            color: #333;\n' +
-            '            background-color: #f8f9fa;\n' +
-            '            padding: 20px;\n' +
-            '            max-width: 1200px;\n' +
-            '            margin: 0 auto;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .header {\n' +
-            '            text-align: center;\n' +
-            '            margin-bottom: 30px;\n' +
-            '            padding-bottom: 20px;\n' +
-            '            border-bottom: 2px solid #42b883;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .header h1 {\n' +
-            '            color: #42b883;\n' +
-            '            margin-bottom: 10px;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .compatibility-badge {\n' +
-            '            display: inline-block;\n' +
-            '            padding: 8px 16px;\n' +
-            '            border-radius: 20px;\n' +
-            '            font-weight: bold;\n' +
-            '            margin: 10px 0;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .compatible { background-color: #e8f5e9; color: #2e7d32; }\n' +
-            '        .partial { background-color: #fff3e0; color: #ef6c00; }\n' +
-            '        .incompatible { background-color: #ffebee; color: #c62828; }\n' +
-            '        \n' +
-            '        .section {\n' +
-            '            background: white;\n' +
-            '            padding: 25px;\n' +
-            '            border-radius: 8px;\n' +
-            '            margin-bottom: 20px;\n' +
-            '            box-shadow: 0 2px 10px rgba(0,0,0,0.05);\n' +
-            '        }\n' +
-            '        \n' +
-            '        .section h2 {\n' +
-            '            color: #42b883;\n' +
-            '            margin-bottom: 20px;\n' +
-            '            padding-bottom: 10px;\n' +
-            '            border-bottom: 1px solid #eee;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .section h3 {\n' +
-            '            color: #555;\n' +
-            '            margin: 25px 0 15px 0;\n' +
-            '            font-size: 18px;\n' +
-            '        }\n' +
-            '        \n' +
-            '        table {\n' +
-            '            width: 100%;\n' +
-            '            border-collapse: collapse;\n' +
-            '            margin: 15px 0;\n' +
-            '            font-size: 14px;\n' +
-            '        }\n' +
-            '        \n' +
-            '        th, td {\n' +
-            '            border: 1px solid #ddd;\n' +
-            '            padding: 12px;\n' +
-            '            text-align: left;\n' +
-            '        }\n' +
-            '        \n' +
-            '        th {\n' +
-            '            background-color: #f5f5f5;\n' +
-            '            font-weight: bold;\n' +
-            '            color: #555;\n' +
-            '        }\n' +
-            '        \n' +
-            '        tr:nth-child(even) {\n' +
-            '            background-color: #f9f9f9;\n' +
-            '        }\n' +
-            '        \n' +
-            '        tr:hover {\n' +
-            '            background-color: #f1f1f1;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .suggestion-card {\n' +
-            '            border-left: 4px solid;\n' +
-            '            padding: 15px;\n' +
-            '            margin: 10px 0;\n' +
-            '            background-color: #f8f9fa;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .critical { border-color: #f44336; }\n' +
-            '        .warning { border-color: #ff9800; }\n' +
-            '        .info { border-color: #2196f3; }\n' +
-            '        .success { border-color: #4caf50; }\n' +
-            '        \n' +
-            '        .footer {\n' +
-            '            text-align: center;\n' +
-            '            margin-top: 40px;\n' +
-            '            padding-top: 20px;\n' +
-            '            border-top: 1px solid #eee;\n' +
-            '            color: #666;\n' +
-            '            font-size: 14px;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .timestamp {\n' +
-            '            color: #888;\n' +
-            '            font-size: 14px;\n' +
-            '            margin: 5px 0;\n' +
-            '        }\n' +
-            '        \n' +
-            '        .required {\n' +
-            '            background-color: #ffebee;\n' +
-            '            color: #c62828;\n' +
-            '            padding: 3px 8px;\n' +
-            '            border-radius: 4px;\n' +
-            '            font-size: 12px;\n' +
-            '            font-weight: bold;\n' +
-            '        }\n' +
-            '        \n' +
-            '        small {\n' +
-            '            color: #666;\n' +
-            '            font-size: 12px;\n' +
-            '        }\n' +
-            '        \n' +
-            '        @media print {\n' +
-            '            body {\n' +
-            '                background: white;\n' +
-            '                padding: 0;\n' +
-            '            }\n' +
-            '            \n' +
-            '            .section {\n' +
-            '                box-shadow: none;\n' +
-            '                border: 1px solid #ddd;\n' +
-            '                page-break-inside: avoid;\n' +
-            '            }\n' +
-            '        }\n' +
-            '    </style>\n' +
-            '</head>\n' +
-            '<body>\n' +
-            '    <div class="header">\n' +
-            '        <h1>' + statusIcon + ' Vue3 兼容性检测报告</h1>\n' +
-            '        <p class="timestamp">生成时间: ' + new Date().toLocaleString() + '</p>\n' +
-            '        <div class="compatibility-badge ' + results.compatibility.level + '">\n' +
-            '            ' + results.compatibility.description.toUpperCase() + '\n' +
-            '        </div>\n' +
-            '    </div>\n' +
-            '    \n' +
-            '    <div class="section">\n' +
-            '        <h2>📊 检测摘要</h2>\n' +
-            '        <table>\n' +
-            '            <tr>\n' +
-            '                <th width="120">检测时间</th>\n' +
-            '                <td>' + this.escapeHtml(results.detectionTime) + '</td>\n' +
-            '            </tr>\n' +
-            '            <tr>\n' +
-            '                <th>浏览器</th>\n' +
-            '                <td>' + this.escapeHtml(results.browser.name) + ' ' + this.escapeHtml(results.browser.version || '') + '</td>\n' +
-            '            </tr>\n' +
-            '            <tr>\n' +
-            '                <th>操作系统</th>\n' +
-            '                <td>' + this.escapeHtml(results.os.name) + ' ' + this.escapeHtml(results.os.version) + '</td>\n' +
-            '            </tr>\n' +
-            '            <tr>\n' +
-            '                <th>兼容性状态</th>\n' +
-            '                <td><strong>' + this.escapeHtml(results.compatibility.description) + '</strong></td>\n' +
-            '            </tr>\n' +
-            '        </table>\n' +
-            '    </div>\n';
-
-          // 添加问题部分（如果有）
-          if (issuesHTML) {
-            htmlContent += '    <div class="section">\n' +
-              '        <h2>⚠️ 检测到的问题</h2>\n' +
-              '        ' + issuesHTML + '\n' +
-              '    </div>\n';
-          }
-
-          // 添加特性支持部分
-          htmlContent += '    <div class="section">\n' +
-            '        <h2>⚙️ 特性支持详情</h2>\n' +
-            '        ' + featuresTablesHTML + '\n' +
-            '    </div>\n';
-
-          // 添加建议部分
-          if (suggestionsHTML) {
-            htmlContent += '    <div class="section">\n' +
-              '        <h2>💡 优化建议</h2>\n' +
-              '        ' + suggestionsHTML + '\n' +
-              '    </div>\n';
-          }
-
-          // 添加 Vue3 要求部分
-          htmlContent += '    <div class="section">\n' +
-            '        <h2>📋 Vue3 兼容性要求</h2>\n' +
-            '        <table>\n' +
-            '            <tr>\n' +
-            '                <th>浏览器</th>\n' +
-            '                <th>最低要求版本</th>\n' +
-            '            </tr>\n' +
-            '            <tr><td>Chrome</td><td>≥ 64</td></tr>\n' +
-            '            <tr><td>Firefox</td><td>≥ 59</td></tr>\n' +
-            '            <tr><td>Safari</td><td>≥ 11</td></tr>\n' +
-            '            <tr><td>Edge</td><td>≥ 79</td></tr>\n' +
-            '            <tr><td>Opera</td><td>≥ 51</td></tr>\n' +
-            '        </table>\n' +
-            '        <p style="margin-top: 15px; color: #666;">\n' +
-            '            <small>以上要求基于 Vue3 官方文档。IE 浏览器不支持 Vue3。</small>\n' +
-            '        </p>\n' +
-            '    </div>\n' +
-            '    \n' +
-            '    <div class="footer">\n' +
-            '        <p>此报告由 Vue3 兼容性检测工具生成</p>\n' +
-            '        <p>检测工具地址: ' + this.escapeHtml(window.location.href) + '</p>\n' +
-            '        <p>生成时间: ' + new Date().toLocaleString() + '</p>\n' +
-            '        <p style="margin-top: 10px; color: #999;">\n' +
-            '            <small>报告仅供参考，具体兼容性以实际测试为准</small>\n' +
-            '        </p>\n' +
-            '    </div>\n' +
-            '</body>\n' +
-            '</html>';
-
-          // 生成文件名
-          var fileName = 'vue3-compatibility-report-' +
-            new Date().getTime() + '.html';
-
-          // 下载文件
-          if (downloadFile(htmlContent, fileName, 'text/html')) {
-            showExportFeedback('✅ HTML 报告已生成并下载', 'success');
-
-            // 可选：在新标签页预览
-            var previewWindow = window.open();
-            previewWindow.document.write(htmlContent);
-            previewWindow.document.close();
-
-          } else {
-            showExportFeedback('❌ 导出失败，请重试', 'error');
-          }
-
-        } catch (error) {
-          console.error('导出 HTML 失败:', error);
-          showExportFeedback('❌ 导出出错: ' + error.message, 'error');
         }
-      },
+
+        // 生成建议 HTML
+        var suggestionsHTML = '';
+        for (var s = 0; s < suggestions.length; s++) {
+          var suggestion = suggestions[s];
+          var actionsText = '';
+
+          if (suggestion.actions && suggestion.actions.length > 0) {
+            var actionTexts = [];
+            for (var a = 0; a < suggestion.actions.length; a++) {
+              actionTexts.push(suggestion.actions[a].text);
+            }
+            actionsText = '<p><small>建议操作: ' + actionTexts.join(', ') + '</small></p>';
+          }
+
+          suggestionsHTML += '<div class="suggestion-card ' + suggestion.type + '">' +
+            '<h3>' + this.escapeHtml(suggestion.title) + '</h3>' +
+            '<p><strong>' + this.escapeHtml(suggestion.description) + '</strong></p>' +
+            '<p>' + this.escapeHtml(suggestion.details) + '</p>' +
+            actionsText +
+            '</div>';
+        }
+
+        // ===== 生成特性支持表格 =====
+        var featuresTablesHTML = '';
+
+        // 1. Vue3 核心特性表格
+        featuresTablesHTML += '<h3>Vue3 核心依赖特性</h3>';
+        featuresTablesHTML += '<table>';
+        featuresTablesHTML += '<tr><th>特性</th><th>支持情况</th><th>重要性</th></tr>';
+
+        var coreFeatures = [
+          { key: 'proxy', name: 'Proxy API', required: true },
+          { key: 'reflect', name: 'Reflect API', required: true },
+          { key: 'promise', name: 'Promise', required: true },
+          { key: 'symbol', name: 'Symbol', required: true },
+          { key: 'map', name: 'Map', required: true },
+          { key: 'set', name: 'Set', required: true }
+        ];
+
+        for (var cf = 0; cf < coreFeatures.length; cf++) {
+          var coreFeature = coreFeatures[cf];
+          var coreSupported = results.features.es6[coreFeature.key];
+          featuresTablesHTML += '<tr>';
+          featuresTablesHTML += '<td>' + coreFeature.name + '</td>';
+          featuresTablesHTML += '<td>' + (coreSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
+          featuresTablesHTML += '<td>' + (coreFeature.required ? '<span class="required">必需</span>' : '推荐') + '</td>';
+          featuresTablesHTML += '</tr>';
+        }
+        featuresTablesHTML += '</table>';
+
+        // 2. 重要 ES6+ 特性表格
+        featuresTablesHTML += '<h3>重要 ES6+ 特性</h3>';
+        featuresTablesHTML += '<table>';
+        featuresTablesHTML += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
+
+        var importantFeatures = [
+          { key: 'asyncAwait', name: 'async/await', desc: '异步编程、组合式API' },
+          { key: 'objectAssign', name: 'Object.assign', desc: '选项合并、props 处理' },
+          { key: 'arrowFunctions', name: '箭头函数', desc: '简洁函数语法' },
+          { key: 'templateLiterals', name: '模板字符串', desc: '字符串拼接、模板' },
+          { key: 'letConst', name: 'let/const', desc: '块级作用域变量' },
+          { key: 'destructuring', name: '解构赋值', desc: '对象/数组解构' },
+          { key: 'spread', name: '扩展运算符', desc: '数组/对象展开' },
+          { key: 'arrayIncludes', name: 'Array.includes', desc: '数组包含判断' },
+          { key: 'stringIncludes', name: 'String.includes', desc: '字符串包含判断' }
+        ];
+
+        for (var imp = 0; imp < importantFeatures.length; imp++) {
+          var impFeature = importantFeatures[imp];
+          var impSupported = false;
+
+          // 特殊处理 async/await（可能在 es2017 中）
+          if (impFeature.key === 'asyncAwait') {
+            impSupported = (results.features.es2017 && results.features.es2017.asyncAwait) ||
+              results.features.es6.asyncAwait;
+          } else {
+            impSupported = results.features.es6[impFeature.key];
+          }
+
+          featuresTablesHTML += '<tr>';
+          featuresTablesHTML += '<td>' + impFeature.name + '</td>';
+          featuresTablesHTML += '<td>' + (impSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
+          featuresTablesHTML += '<td>' + impFeature.desc + '</td>';
+          featuresTablesHTML += '</tr>';
+        }
+        featuresTablesHTML += '</table>';
+
+        // 3. Web APIs 支持表格
+        featuresTablesHTML += '<h3>Web API 支持</h3>';
+        featuresTablesHTML += '<table>';
+        featuresTablesHTML += '<tr><th>API</th><th>支持情况</th><th>详情</th></tr>';
+
+        var webAPIs = [
+          { key: 'webgl', name: 'WebGL', desc: '3D 图形渲染' },
+          { key: 'fetch', name: 'Fetch API', desc: '网络请求' },
+          { key: 'localStorage', name: 'localStorage', desc: '本地存储' },
+          { key: 'serviceWorker', name: 'Service Worker', desc: '离线应用、推送' },
+          { key: 'indexDB', name: 'IndexedDB', desc: '客户端数据库' },
+          { key: 'es6Modules', name: 'ES6 模块', desc: '模块化开发' },
+          { key: 'intersectionObserver', name: 'IntersectionObserver', desc: '元素可见性监听' },
+          { key: 'mutationObserver', name: 'MutationObserver', desc: 'DOM 变化监听' }
+        ];
+
+        for (var wa = 0; wa < webAPIs.length; wa++) {
+          var api = webAPIs[wa];
+          var apiSupported = results.features.webAPIs[api.key];
+          var apiDetails = '';
+
+          if (api.key === 'webgl' && apiSupported) {
+            apiDetails = '版本: ' + this.escapeHtml(results.features.webAPIs.webglVersion || 'Unknown');
+          }
+
+          featuresTablesHTML += '<tr>';
+          featuresTablesHTML += '<td>' + api.name + '<br><small>' + api.desc + '</small></td>';
+          featuresTablesHTML += '<td>' + (apiSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
+          featuresTablesHTML += '<td>' + apiDetails + '</td>';
+          featuresTablesHTML += '</tr>';
+        }
+        featuresTablesHTML += '</table>';
+
+        // 4. CSS 特性支持表格
+        featuresTablesHTML += '<h3>CSS 特性支持</h3>';
+        featuresTablesHTML += '<table>';
+        featuresTablesHTML += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
+
+        var cssFeatures = [
+          { key: 'flexbox', name: 'Flexbox', desc: '弹性布局' },
+          { key: 'grid', name: 'CSS Grid', desc: '网格布局' },
+          { key: 'cssVariables', name: 'CSS 变量', desc: '自定义属性、主题' },
+          { key: 'transform', name: 'Transform', desc: '元素变换' },
+          { key: 'transition', name: 'Transition', desc: '过渡动画' },
+          { key: 'animation', name: 'Animation', desc: '关键帧动画' },
+          { key: 'calc', name: 'calc()', desc: '动态计算值' },
+          { key: 'filter', name: 'Filter', desc: '滤镜效果' }
+        ];
+
+        for (var css = 0; css < cssFeatures.length; css++) {
+          var cssFeature = cssFeatures[css];
+          var cssSupported = results.features.css[cssFeature.key];
+          featuresTablesHTML += '<tr>';
+          featuresTablesHTML += '<td>' + cssFeature.name + '</td>';
+          featuresTablesHTML += '<td>' + (cssSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
+          featuresTablesHTML += '<td>' + cssFeature.desc + '</td>';
+          featuresTablesHTML += '</tr>';
+        }
+        featuresTablesHTML += '</table>';
+
+        // ===== 完整的 HTML 报告 =====
+        var htmlContent = '<!DOCTYPE html>\n' +
+          '<html lang="zh-CN">\n' +
+          '<head>\n' +
+          '    <meta charset="UTF-8">\n' +
+          '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+          '    <title>Vue3 兼容性检测报告</title>\n' +
+          '    <style>\n' +
+          '        * {\n' +
+          '            margin: 0;\n' +
+          '            padding: 0;\n' +
+          '            box-sizing: border-box;\n' +
+          '        }\n' +
+          '        \n' +
+          '        body {\n' +
+          '            font-family: "Microsoft YaHei", Arial, sans-serif;\n' +
+          '            line-height: 1.6;\n' +
+          '            color: #333;\n' +
+          '            background-color: #f8f9fa;\n' +
+          '            padding: 20px;\n' +
+          '            max-width: 1200px;\n' +
+          '            margin: 0 auto;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .header {\n' +
+          '            text-align: center;\n' +
+          '            margin-bottom: 30px;\n' +
+          '            padding-bottom: 20px;\n' +
+          '            border-bottom: 2px solid #42b883;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .header h1 {\n' +
+          '            color: #42b883;\n' +
+          '            margin-bottom: 10px;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .compatibility-badge {\n' +
+          '            display: inline-block;\n' +
+          '            padding: 8px 16px;\n' +
+          '            border-radius: 20px;\n' +
+          '            font-weight: bold;\n' +
+          '            margin: 10px 0;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .compatible { background-color: #e8f5e9; color: #2e7d32; }\n' +
+          '        .partial { background-color: #fff3e0; color: #ef6c00; }\n' +
+          '        .incompatible { background-color: #ffebee; color: #c62828; }\n' +
+          '        \n' +
+          '        .section {\n' +
+          '            background: white;\n' +
+          '            padding: 25px;\n' +
+          '            border-radius: 8px;\n' +
+          '            margin-bottom: 20px;\n' +
+          '            box-shadow: 0 2px 10px rgba(0,0,0,0.05);\n' +
+          '        }\n' +
+          '        \n' +
+          '        .section h2 {\n' +
+          '            color: #42b883;\n' +
+          '            margin-bottom: 20px;\n' +
+          '            padding-bottom: 10px;\n' +
+          '            border-bottom: 1px solid #eee;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .section h3 {\n' +
+          '            color: #555;\n' +
+          '            margin: 25px 0 15px 0;\n' +
+          '            font-size: 18px;\n' +
+          '        }\n' +
+          '        \n' +
+          '        table {\n' +
+          '            width: 100%;\n' +
+          '            border-collapse: collapse;\n' +
+          '            margin: 15px 0;\n' +
+          '            font-size: 14px;\n' +
+          '        }\n' +
+          '        \n' +
+          '        th, td {\n' +
+          '            border: 1px solid #ddd;\n' +
+          '            padding: 12px;\n' +
+          '            text-align: left;\n' +
+          '        }\n' +
+          '        \n' +
+          '        th {\n' +
+          '            background-color: #f5f5f5;\n' +
+          '            font-weight: bold;\n' +
+          '            color: #555;\n' +
+          '        }\n' +
+          '        \n' +
+          '        tr:nth-child(even) {\n' +
+          '            background-color: #f9f9f9;\n' +
+          '        }\n' +
+          '        \n' +
+          '        tr:hover {\n' +
+          '            background-color: #f1f1f1;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .suggestion-card {\n' +
+          '            border-left: 4px solid;\n' +
+          '            padding: 15px;\n' +
+          '            margin: 10px 0;\n' +
+          '            background-color: #f8f9fa;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .critical { border-color: #f44336; }\n' +
+          '        .warning { border-color: #ff9800; }\n' +
+          '        .info { border-color: #2196f3; }\n' +
+          '        .success { border-color: #4caf50; }\n' +
+          '        \n' +
+          '        .footer {\n' +
+          '            text-align: center;\n' +
+          '            margin-top: 40px;\n' +
+          '            padding-top: 20px;\n' +
+          '            border-top: 1px solid #eee;\n' +
+          '            color: #666;\n' +
+          '            font-size: 14px;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .timestamp {\n' +
+          '            color: #888;\n' +
+          '            font-size: 14px;\n' +
+          '            margin: 5px 0;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .required {\n' +
+          '            background-color: #ffebee;\n' +
+          '            color: #c62828;\n' +
+          '            padding: 3px 8px;\n' +
+          '            border-radius: 4px;\n' +
+          '            font-size: 12px;\n' +
+          '            font-weight: bold;\n' +
+          '        }\n' +
+          '        \n' +
+          '        small {\n' +
+          '            color: #666;\n' +
+          '            font-size: 12px;\n' +
+          '        }\n' +
+          '        \n' +
+          '        @media print {\n' +
+          '            body {\n' +
+          '                background: white;\n' +
+          '                padding: 0;\n' +
+          '            }\n' +
+          '            \n' +
+          '            .section {\n' +
+          '                box-shadow: none;\n' +
+          '                border: 1px solid #ddd;\n' +
+          '                page-break-inside: avoid;\n' +
+          '            }\n' +
+          '        }\n' +
+          '    </style>\n' +
+          '</head>\n' +
+          '<body>\n' +
+          '    <div class="header">\n' +
+          '        <h1>' + statusIcon + ' Vue3 兼容性检测报告</h1>\n' +
+          '        <p class="timestamp">生成时间: ' + new Date().toLocaleString() + '</p>\n' +
+          '        <div class="compatibility-badge ' + results.compatibility.level + '">\n' +
+          '            ' + results.compatibility.description.toUpperCase() + '\n' +
+          '        </div>\n' +
+          '    </div>\n' +
+          '    \n' +
+          '    <div class="section">\n' +
+          '        <h2>📊 检测摘要</h2>\n' +
+          '        <table>\n' +
+          '            <tr>\n' +
+          '                <th width="120">检测时间</th>\n' +
+          '                <td>' + this.escapeHtml(results.detectionTime) + '</td>\n' +
+          '            </tr>\n' +
+          '            <tr>\n' +
+          '                <th>浏览器</th>\n' +
+          '                <td>' + this.escapeHtml(results.browser.name) + ' ' + this.escapeHtml(results.browser.version || '') + '</td>\n' +
+          '            </tr>\n' +
+          '            <tr>\n' +
+          '                <th>操作系统</th>\n' +
+          '                <td>' + this.escapeHtml(results.os.name) + ' ' + this.escapeHtml(results.os.version) + '</td>\n' +
+          '            </tr>\n' +
+          '            <tr>\n' +
+          '                <th>兼容性状态</th>\n' +
+          '                <td><strong>' + this.escapeHtml(results.compatibility.description) + '</strong></td>\n' +
+          '            </tr>\n' +
+          '        </table>\n' +
+          '    </div>\n';
+
+        // 添加问题部分（如果有）
+        if (issuesHTML) {
+          htmlContent += '    <div class="section">\n' +
+            '        <h2>⚠️ 检测到的问题</h2>\n' +
+            '        ' + issuesHTML + '\n' +
+            '    </div>\n';
+        }
+
+        // 添加特性支持部分
+        htmlContent += '    <div class="section">\n' +
+          '        <h2>⚙️ 特性支持详情</h2>\n' +
+          '        ' + featuresTablesHTML + '\n' +
+          '    </div>\n';
+
+        // 添加建议部分
+        if (suggestionsHTML) {
+          htmlContent += '    <div class="section">\n' +
+            '        <h2>💡 优化建议</h2>\n' +
+            '        ' + suggestionsHTML + '\n' +
+            '    </div>\n';
+        }
+
+        // 添加 Vue3 要求部分
+        htmlContent += '    <div class="section">\n' +
+          '        <h2>📋 Vue3 兼容性要求</h2>\n' +
+          '        <table>\n' +
+          '            <tr>\n' +
+          '                <th>浏览器</th>\n' +
+          '                <th>最低要求版本</th>\n' +
+          '            </tr>\n' +
+          '            <tr><td>Chrome</td><td>≥ 64</td></tr>\n' +
+          '            <tr><td>Firefox</td><td>≥ 59</td></tr>\n' +
+          '            <tr><td>Safari</td><td>≥ 11</td></tr>\n' +
+          '            <tr><td>Edge</td><td>≥ 79</td></tr>\n' +
+          '            <tr><td>Opera</td><td>≥ 51</td></tr>\n' +
+          '        </table>\n' +
+          '        <p style="margin-top: 15px; color: #666;">\n' +
+          '            <small>以上要求基于 Vue3 官方文档。IE 浏览器不支持 Vue3。</small>\n' +
+          '        </p>\n' +
+          '    </div>\n' +
+          '    \n' +
+          '    <div class="footer">\n' +
+          '        <p>此报告由 Vue3 兼容性检测工具生成</p>\n' +
+          '        <p>检测工具地址: ' + this.escapeHtml(window.location.href) + '</p>\n' +
+          '        <p>生成时间: ' + new Date().toLocaleString() + '</p>\n' +
+          '        <p style="margin-top: 10px; color: #999;">\n' +
+          '            <small>报告仅供参考，具体兼容性以实际测试为准</small>\n' +
+          '        </p>\n' +
+          '    </div>\n' +
+          '</body>\n' +
+          '</html>';
+
+        // 生成文件名
+        var fileName = 'vue3-compatibility-report-' +
+          new Date().getTime() + '.html';
+
+        // 下载文件
+        if (downloadFile(htmlContent, fileName, 'text/html')) {
+          showExportFeedback('✅ HTML 报告已生成并下载', 'success');
+
+          // 可选：在新标签页预览
+          var previewWindow = window.open();
+          previewWindow.document.write(htmlContent);
+          previewWindow.document.close();
+
+        } else {
+          showExportFeedback('❌ 导出失败，请重试', 'error');
+        }
+
+      } catch (error) {
+        console.error('导出 HTML 失败:', error);
+        showExportFeedback('❌ 导出出错: ' + error.message, 'error');
+      }
+    },
     // ================ 主入口 ================
     runDetection: function () {
 
@@ -1420,6 +1281,178 @@
       return result;
     },
 
+    // ================ 特性支持检测 ================
+    detectFeatureSupport: function() {
+      var features = {
+        es6: {},
+        es2016: {},
+        es2017: {},
+        css: {},
+        webAPIs: {}
+      };
+
+      // ===== ES6 核心特性 =====
+      features.es6 = {
+        // Vue3 绝对必需
+        proxy: typeof Proxy !== 'undefined',
+        reflect: typeof Reflect !== 'undefined',
+        promise: typeof Promise !== 'undefined',
+        symbol: typeof Symbol !== 'undefined',
+        map: typeof Map !== 'undefined',
+        set: typeof Set !== 'undefined',
+
+        // Vue3 内部优化使用
+        weakMap: typeof WeakMap !== 'undefined',
+        weakSet: typeof WeakSet !== 'undefined',
+
+        // Vue3 常用工具依赖
+        objectAssign: typeof Object.assign === 'function',
+        arrayIncludes: 'includes' in Array.prototype,
+        stringIncludes: 'includes' in String.prototype,
+        arrayFrom: typeof Array.from === 'function',
+        asyncAwait: this.testAsyncAwaitSupport(),
+
+        // 对象方法（选项合并等使用）
+        objectKeys: typeof Object.keys === 'function',
+        objectEntries: typeof Object.entries === 'function',
+        objectValues: typeof Object.values === 'function',
+        objectFromEntries: typeof Object.fromEntries === 'function',
+
+        // 语法支持
+        arrowFunctions: this.testArrowFunctions(),
+        templateLiterals: this.testTemplateLiterals(),
+        letConst: this.testLetConst(),
+        classes: this.testClassSupport(),
+        defaultParams: this.testDefaultParameters(),
+        restParams: this.testRestParameters(),
+        spread: this.testSpreadOperator(),
+        destructuring: this.testDestructuring(),
+        forOf: this.testForOfSupport()
+      };
+
+      // ===== ES2016+ 特性 =====
+      features.es2016 = {
+        arrayPrototypeIncludes: 'includes' in Array.prototype,
+        exponentiationOperator: this.testExponentiationOperator()
+      };
+
+      features.es2017 = {
+        objectEntries: typeof Object.entries === 'function',
+        objectValues: typeof Object.values === 'function',
+        stringPadding: 'padStart' in String.prototype && 'padEnd' in String.prototype
+      };
+
+      features.es2018 = {
+        objectSpread: this.testObjectSpread(),
+        promiseFinally: 'finally' in Promise.prototype,
+        asyncIteration: this.testAsyncIteration()
+      };
+
+      // ===== CSS 特性 =====
+      features.css = {
+        flexbox: this.testCSSFeature('display', 'flex'),
+        grid: this.testCSSFeature('display', 'grid'),
+        cssVariables: this.testCSSVariables(),
+        transform: this.testCSSFeature('transform', 'translate(10px)'),
+        transition: this.testCSSFeature('transition', 'all 0.3s'),
+        animation: this.testCSSFeature('animation', 'fadeIn 1s'),
+        calc: this.testCSSFeature('width', 'calc(100% - 20px)'),
+        filter: this.testCSSFeature('filter', 'blur(5px)')
+      };
+
+      // ===== Web APIs =====
+      features.webAPIs = {
+        webgl: this.testWebGLSupport(),
+        webglVersion: this.getWebGLInfo().version,
+        serviceWorker: 'serviceWorker' in navigator,
+        localStorage: 'localStorage' in window,
+        sessionStorage: 'sessionStorage' in window,
+        indexDB: 'indexedDB' in window,
+        fetch: 'fetch' in window,
+        geolocation: 'geolocation' in navigator,
+        webWorkers: 'Worker' in window,
+        webSockets: 'WebSocket' in window,
+
+        // 现代 Web APIs
+        intersectionObserver: 'IntersectionObserver' in window,
+        mutationObserver: 'MutationObserver' in window,
+        resizeObserver: 'ResizeObserver' in window,
+        performance: 'performance' in window,
+        performanceObserver: 'PerformanceObserver' in window,
+        navigatorShare: 'share' in navigator,
+        clipboard: 'clipboard' in navigator,
+
+        // 模块化
+        es6Modules: 'noModule' in HTMLScriptElement.prototype,
+        dynamicImport: this.testDynamicImport()
+      };
+
+      // ====================================================
+      // 🛠️ 兼容性修复：确保重要属性在根级别也存在
+      // 这样旧代码（使用 features.webgl）和新代码（使用 features.webAPIs.webgl）都能正常工作
+      // ====================================================
+
+      // 1. WebGL 相关（最常出问题）
+      features.webgl = features.webAPIs.webgl;
+      features.webglVersion = features.webAPIs.webglVersion;
+
+      // 2. 网络相关 API
+      features.fetch = features.webAPIs.fetch;
+      features.webSockets = features.webAPIs.webSockets;
+      features.geolocation = features.webAPIs.geolocation;
+
+      // 3. 存储相关 API
+      features.localStorage = features.webAPIs.localStorage;
+      features.sessionStorage = features.webAPIs.sessionStorage;
+      features.indexDB = features.webAPIs.indexDB;
+
+      // 4. 工作者和 Service Worker
+      features.serviceWorker = features.webAPIs.serviceWorker;
+      features.webWorkers = features.webAPIs.webWorkers;
+
+      // 5. 模块化支持
+      features.es6Modules = features.webAPIs.es6Modules;
+      features.dynamicImport = features.webAPIs.dynamicImport;
+
+      // 6. 观察者 API
+      features.intersectionObserver = features.webAPIs.intersectionObserver;
+      features.mutationObserver = features.webAPIs.mutationObserver;
+      features.resizeObserver = features.webAPIs.resizeObserver;
+
+      // 7. 性能 API
+      features.performance = features.webAPIs.performance;
+      features.performanceObserver = features.webAPIs.performanceObserver;
+
+      // 8. 现代 Web API
+      features.navigatorShare = features.webAPIs.navigatorShare;
+      features.clipboard = features.webAPIs.clipboard;
+
+      // 9. ES2016+ 特性同步到 es6 对象（因为显示代码在 es6 中查找）
+      // async/await
+      if (features.es2017 && features.es2017.asyncAwait !== undefined) {
+        features.es6.asyncAwait = features.es2017.asyncAwait;
+      }
+      // objectEntries / objectValues
+      if (features.es2017) {
+        if (features.es2017.objectEntries !== undefined) {
+          features.es6.objectEntries = features.es2017.objectEntries;
+        }
+        if (features.es2017.objectValues !== undefined) {
+          features.es6.objectValues = features.es2017.objectValues;
+        }
+      }
+      // arrayPrototypeIncludes
+      if (features.es2016 && features.es2016.arrayPrototypeIncludes !== undefined) {
+        features.es6.arrayPrototypeIncludes = features.es2016.arrayPrototypeIncludes;
+      }
+
+      // ====================================================
+      // 结束兼容性修复
+      // ====================================================
+
+      return features;
+    },
+
     // ================ 测试辅助函数 ================
 
     testES6Support: function () {
@@ -1831,10 +1864,145 @@
       html += '<h2>检测结果: ' + results.compatibility.description + '</h2>';
       html += '<p>检测时间: ' + results.detectionTime + '</p>';
       html += '</div>';
+      // 在环境信息汇总表格后面添加特性支持详情
+      html += '<div class="features-section">';
+      html += '<h3>⚙️ 特性支持详情</h3>';
 
-      // 4. 🔥 关键修改：特性支持详情改为折叠面板
-      html += this.buildFeaturesCollapsible(); // 新增函数
+      // ===== Vue3 核心特性表格 =====
+      html += '<div class="feature-category">';
+      html += '<h4>Vue3 核心依赖特性</h4>';
+      html += '<table class="feature-table">';
+      html += '<tr><th>特性</th><th>支持情况</th><th>重要性</th></tr>';
 
+      // 必需特性
+      var coreFeatures = [
+        { key: 'proxy', name: 'Proxy API', desc: 'Vue3 响应式系统核心', required: true },
+        { key: 'reflect', name: 'Reflect API', desc: '响应式辅助', required: true },
+        { key: 'promise', name: 'Promise', desc: '异步组件、组合式API', required: true },
+        { key: 'symbol', name: 'Symbol', desc: '内部标识、元编程', required: true },
+        { key: 'map', name: 'Map', desc: '内部数据结构', required: true },
+        { key: 'set', name: 'Set', desc: '内部数据结构', required: true }
+      ];
+
+      for (var i = 0; i < coreFeatures.length; i++) {
+        var feature = coreFeatures[i];
+        var supported = results.features.es6[feature.key];
+        html += '<tr>';
+        html += '<td><strong>' + feature.name + '</strong><br><small>' + feature.desc + '</small></td>';
+        html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
+        html += supported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>';
+        html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '推荐') + '</td>';
+        html += '</tr>';
+      }
+
+      html += '</table>';
+      html += '</div>';
+
+      // ===== 重要 ES6+ 特性表格 =====
+      html += '<div class="feature-category">';
+      html += '<h4>重要 ES6+ 特性</h4>';
+      html += '<table class="feature-table">';
+      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
+
+      var importantFeatures = [
+        { key: 'objectAssign', name: 'Object.assign', desc: '选项合并、props 处理' },
+        { key: 'asyncAwait', name: 'async/await', desc: '异步编程、组合式API' },
+        { key: 'arrowFunctions', name: '箭头函数', desc: '简洁函数语法' },
+        { key: 'templateLiterals', name: '模板字符串', desc: '字符串拼接、模板' },
+        { key: 'letConst', name: 'let/const', desc: '块级作用域变量' },
+        { key: 'destructuring', name: '解构赋值', desc: '对象/数组解构' },
+        { key: 'spread', name: '扩展运算符', desc: '数组/对象展开' },
+        { key: 'arrayIncludes', name: 'Array.includes', desc: '数组包含判断' },
+        { key: 'stringIncludes', name: 'String.includes', desc: '字符串包含判断' }
+      ];
+
+      for (var j = 0; j < importantFeatures.length; j++) {
+        var impFeature = importantFeatures[j];
+        var impSupported = results.features.es6[impFeature.key];
+        html += '<tr>';
+        html += '<td><strong>' + impFeature.name + '</strong></td>';
+        html += '<td class="' + (impSupported ? 'supported' : 'not-supported') + '">';
+        html += impSupported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>';
+        html += '<td><small>' + impFeature.desc + '</small></td>';
+        html += '</tr>';
+      }
+
+      html += '</table>';
+      html += '</div>';
+
+// ===== Web APIs 支持表格 =====
+      html += '<div class="feature-category">';
+      html += '<h4>Web API 支持</h4>';
+      html += '<table class="feature-table">';
+      html += '<tr><th>API</th><th>支持情况</th><th>版本/详情</th></tr>';
+
+      var webAPIs = [
+        { key: 'webgl', name: 'WebGL', desc: '3D 图形渲染' },
+        { key: 'fetch', name: 'Fetch API', desc: '网络请求' },
+        { key: 'localStorage', name: 'localStorage', desc: '本地存储' },
+        { key: 'serviceWorker', name: 'Service Worker', desc: '离线应用、推送' },
+        { key: 'indexDB', name: 'IndexedDB', desc: '客户端数据库' },
+        { key: 'es6Modules', name: 'ES6 模块', desc: '模块化开发' },
+        { key: 'intersectionObserver', name: 'IntersectionObserver', desc: '元素可见性监听' },
+        { key: 'mutationObserver', name: 'MutationObserver', desc: 'DOM 变化监听' }
+      ];
+
+      for (var k = 0; k < webAPIs.length; k++) {
+        var api = webAPIs[k];
+        var apiSupported = results.features.webAPIs[api.key];
+        var versionInfo = '';
+
+        if (api.key === 'webgl' && apiSupported) {
+          versionInfo = '<small>' + this.escapeHtml(results.features.webAPIs.webglVersion) + '</small>';
+        }
+
+        html += '<tr>';
+        html += '<td><strong>' + api.name + '</strong><br><small>' + api.desc + '</small></td>';
+        html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">';
+        html += apiSupported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>';
+        html += '<td>' + versionInfo + '</td>';
+        html += '</tr>';
+      }
+
+      html += '</table>';
+      html += '</div>';
+
+      // ===== CSS 特性支持表格 =====
+      html += '<div class="feature-category">';
+      html += '<h4>CSS 特性支持</h4>';
+      html += '<table class="feature-table">';
+      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
+
+      var cssFeatures = [
+        { key: 'flexbox', name: 'Flexbox', desc: '弹性布局' },
+        { key: 'grid', name: 'CSS Grid', desc: '网格布局' },
+        { key: 'cssVariables', name: 'CSS 变量', desc: '自定义属性、主题' },
+        { key: 'transform', name: 'Transform', desc: '元素变换' },
+        { key: 'transition', name: 'Transition', desc: '过渡动画' },
+        { key: 'animation', name: 'Animation', desc: '关键帧动画' },
+        { key: 'calc', name: 'calc()', desc: '动态计算值' },
+        { key: 'filter', name: 'Filter', desc: '滤镜效果' }
+      ];
+
+      for (var c = 0; c < cssFeatures.length; c++) {
+        var cssFeature = cssFeatures[c];
+        var cssSupported = results.features.css[cssFeature.key];
+        html += '<tr>';
+        html += '<td><strong>' + cssFeature.name + '</strong></td>';
+        html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">';
+        html += cssSupported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>';
+        html += '<td><small>' + cssFeature.desc + '</small></td>';
+        html += '</tr>';
+      }
+
+      html += '</table>';
+      html += '</div>';
+
+      html += '</div>';
       // 2. 环境信息汇总表格
       html += '<div class="info-section">';
       html += '<h3>📊 环境信息汇总</h3>';
@@ -2031,275 +2199,6 @@
 
       document.getElementById('result').innerHTML = html;
       this.bindEvents();
-    },
-
-    // 新增：构建可折叠的特性面板
-    buildFeaturesCollapsible: function() {
-      var html = '<div class="features-section collapsible-section">';
-      html += '<h3>⚙️ 特性支持详情 <small style="color:#666; font-weight:normal;">(点击展开查看)</small></h3>';
-
-      // Vue3核心特性（默认展开，因为这是兼容性判断必需的）
-      html += '<div class="collapsible-panel expanded" id="core-features-panel">';
-      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'core-features\')">';
-      html += '<h4><span class="arrow">▼</span> Vue3 核心依赖特性</h4>';
-      html += '<span class="panel-status" id="core-features-status">✅ 已检测</span>';
-      html += '</div>';
-      html += '<div class="panel-content" id="core-features-content">';
-      html += this.buildCoreFeaturesTable();
-      html += '</div>';
-      html += '</div>';
-
-      // 重要ES6+特性（默认折叠）
-      html += '<div class="collapsible-panel" id="important-features-panel">';
-      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'important-features\')">';
-      html += '<h4><span class="arrow">▶</span> 重要 ES6+ 特性</h4>';
-      html += '<span class="panel-status" id="important-features-status">⏳ 点击检测</span>';
-      html += '</div>';
-      html += '<div class="panel-content" id="important-features-content" style="display:none;">';
-      html += '<p class="loading-text">点击上方标题开始检测...</p>';
-      html += '</div>';
-      html += '</div>';
-
-      // Web API支持（默认折叠）
-      html += '<div class="collapsible-panel" id="webapi-features-panel">';
-      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'webapi-features\')">';
-      html += '<h4><span class="arrow">▶</span> Web API 支持</h4>';
-      html += '<span class="panel-status" id="webapi-features-status">⏳ 点击检测</span>';
-      html += '</div>';
-      html += '<div class="panel-content" id="webapi-features-content" style="display:none;">';
-      html += '<p class="loading-text">点击上方标题开始检测...</p>';
-      html += '</div>';
-      html += '</div>';
-
-      // CSS特性支持（默认折叠）
-      html += '<div class="collapsible-panel" id="css-features-panel">';
-      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'css-features\')">';
-      html += '<h4><span class="arrow">▶</span> CSS 特性支持</h4>';
-      html += '<span class="panel-status" id="css-features-status">⏳ 点击检测</span>';
-      html += '</div>';
-      html += '<div class="panel-content" id="css-features-content" style="display:none;">';
-      html += '<p class="loading-text">点击上方标题开始检测...</p>';
-      html += '</div>';
-      html += '</div>';
-
-      html += '</div>';
-      return html;
-    },
-
-    // 新增：面板切换函数
-    togglePanel: function(panelType) {
-      var panel = document.getElementById(panelType + '-panel');
-      var content = document.getElementById(panelType + '-content');
-      var arrow = panel.querySelector('.arrow');
-      var status = document.getElementById(panelType + '-status');
-
-      // 切换展开/折叠
-      if (content.style.display === 'none') {
-        // 展开面板
-        content.style.display = 'block';
-        arrow.textContent = '▼';
-        panel.classList.add('expanded');
-
-        // 如果是第一次展开，执行懒检测
-        if (status.textContent.indexOf('点击检测') > -1) {
-          this.lazyLoadPanelContent(panelType);
-        }
-      } else {
-        // 折叠面板
-        content.style.display = 'none';
-        arrow.textContent = '▶';
-        panel.classList.remove('expanded');
-      }
-    },
-
-// 新增：懒加载面板内容
-    lazyLoadPanelContent: function(panelType) {
-      var self = this;
-      var content = document.getElementById(panelType + '-content');
-      var status = document.getElementById(panelType + '-status');
-
-      // 显示加载中
-      content.innerHTML = '<div class="panel-loading"><div class="mini-spinner"></div><p>正在检测中...</p></div>';
-      status.innerHTML = '⏳ 检测中...';
-
-      // 异步执行检测
-      setTimeout(function() {
-        try {
-          var html = '';
-          var featuresData;
-
-          switch(panelType) {
-            case 'important-features':
-              featuresData = self.lazyDetect.importantFeatures();
-              html = self.buildImportantFeaturesTable(featuresData);
-              status.innerHTML = '✅ 已检测';
-              break;
-
-            case 'webapi-features':
-              featuresData = self.lazyDetect.webAPIs();
-              html = self.buildWebAPIsTable(featuresData);
-              status.innerHTML = '✅ 已检测';
-              break;
-
-            case 'css-features':
-              featuresData = self.lazyDetect.cssFeatures();
-              html = self.buildCSSFeaturesTable(featuresData);
-              status.innerHTML = '✅ 已检测';
-              break;
-          }
-
-          content.innerHTML = html;
-
-        } catch (error) {
-          console.error('懒检测失败:', error);
-          content.innerHTML = '<p class="error-text">检测失败: ' + self.escapeHtml(error.message) + '</p>';
-          status.innerHTML = '❌ 检测失败';
-        }
-      }, 100); // 小延迟让UI更新
-    },
-
-// 新增：构建各个特性表格的函数
-    buildCoreFeaturesTable: function() {
-      var features = this.results.features.es6;
-      var html = '<table class="feature-table">';
-      html += '<tr><th>特性</th><th>支持情况</th><th>重要性</th></tr>';
-
-      var coreFeatures = [
-        { key: 'proxy', name: 'Proxy API', desc: 'Vue3 响应式系统核心', required: true },
-        { key: 'reflect', name: 'Reflect API', desc: '响应式辅助', required: true },
-        { key: 'promise', name: 'Promise', desc: '异步组件、组合式API', required: true },
-        { key: 'symbol', name: 'Symbol', desc: '内部标识、元编程', required: true },
-        { key: 'map', name: 'Map', desc: '内部数据结构', required: true },
-        { key: 'set', name: 'Set', desc: '内部数据结构', required: true }
-      ];
-
-      for (var i = 0; i < coreFeatures.length; i++) {
-        var feature = coreFeatures[i];
-        var supported = features[feature.key];
-        html += '<tr>';
-        html += '<td><strong>' + feature.name + '</strong><br><small>' + feature.desc + '</small></td>';
-        html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
-        html += supported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '推荐') + '</td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      return html;
-    },
-
-    buildImportantFeaturesTable: function(featuresData) {
-      var html = '<table class="feature-table">';
-      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
-
-      var importantFeatures = [
-        { key: 'asyncAwait', name: 'async/await', desc: '异步编程、组合式API', source: 'es2017' },
-        { key: 'objectAssign', name: 'Object.assign', desc: '选项合并、props 处理', source: 'es6' },
-        { key: 'arrowFunctions', name: '箭头函数', desc: '简洁函数语法', source: 'es6' },
-        { key: 'templateLiterals', name: '模板字符串', desc: '字符串拼接、模板', source: 'es6' },
-        { key: 'letConst', name: 'let/const', desc: '块级作用域变量', source: 'es6' },
-        { key: 'destructuring', name: '解构赋值', desc: '对象/数组解构', source: 'es6' },
-        { key: 'spread', name: '扩展运算符', desc: '数组/对象展开', source: 'es6' },
-        { key: 'arrayIncludes', name: 'Array.includes', desc: '数组包含判断', source: 'es2016' },
-        { key: 'objectEntries', name: 'Object.entries', desc: '对象遍历', source: 'es2017' },
-        { key: 'objectValues', name: 'Object.values', desc: '对象值遍历', source: 'es2017' }
-      ];
-
-      for (var i = 0; i < importantFeatures.length; i++) {
-        var feature = importantFeatures[i];
-        var supported = false;
-
-        // 根据来源获取支持状态
-        if (feature.source === 'es2016' && featuresData.es2016) {
-          supported = featuresData.es2016[feature.key] || false;
-        } else if (feature.source === 'es2017' && featuresData.es2017) {
-          supported = featuresData.es2017[feature.key] || false;
-        } else if (feature.source === 'es6') {
-          supported = this.results.features.es6[feature.key] || false;
-        }
-
-        html += '<tr>';
-        html += '<td><strong>' + feature.name + '</strong></td>';
-        html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
-        html += supported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td><small>' + feature.desc + '</small></td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      return html;
-    },
-
-    buildWebAPIsTable: function(featuresData) {
-      var html = '<table class="feature-table">';
-      html += '<tr><th>API</th><th>支持情况</th><th>版本/详情</th></tr>';
-
-      var webAPIs = [
-        { key: 'webgl', name: 'WebGL', desc: '3D 图形渲染' },
-        { key: 'fetch', name: 'Fetch API', desc: '网络请求' },
-        { key: 'localStorage', name: 'localStorage', desc: '本地存储' },
-        { key: 'serviceWorker', name: 'Service Worker', desc: '离线应用、推送' },
-        { key: 'indexDB', name: 'IndexedDB', desc: '客户端数据库' },
-        { key: 'geolocation', name: 'Geolocation API', desc: '地理位置' },
-        { key: 'webWorkers', name: 'Web Workers', desc: '多线程' },
-        { key: 'webSockets', name: 'WebSockets', desc: '实时通信' },
-        { key: 'intersectionObserver', name: 'IntersectionObserver', desc: '元素可见性监听' },
-        { key: 'mutationObserver', name: 'MutationObserver', desc: 'DOM 变化监听' }
-      ];
-
-      for (var i = 0; i < webAPIs.length; i++) {
-        var api = webAPIs[i];
-        var apiSupported = featuresData[api.key];
-        var versionInfo = '';
-
-        if (api.key === 'webgl' && apiSupported) {
-          versionInfo = '<small>版本: ' + this.escapeHtml(featuresData.webglVersion) + '</small>';
-        }
-
-        html += '<tr>';
-        html += '<td><strong>' + api.name + '</strong><br><small>' + api.desc + '</small></td>';
-        html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">';
-        html += apiSupported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td>' + versionInfo + '</td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      return html;
-    },
-
-    buildCSSFeaturesTable: function(featuresData) {
-      var html = '<table class="feature-table">';
-      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
-
-      var cssFeatures = [
-        { key: 'flexbox', name: 'Flexbox', desc: '弹性布局' },
-        { key: 'grid', name: 'CSS Grid', desc: '网格布局' },
-        { key: 'cssVariables', name: 'CSS 变量', desc: '自定义属性、主题' },
-        { key: 'transform', name: 'Transform', desc: '元素变换' },
-        { key: 'transition', name: 'Transition', desc: '过渡动画' },
-        { key: 'animation', name: 'Animation', desc: '关键帧动画' },
-        { key: 'calc', name: 'calc()', desc: '动态计算值' },
-        { key: 'filter', name: 'Filter', desc: '滤镜效果' }
-      ];
-
-      for (var i = 0; i < cssFeatures.length; i++) {
-        var cssFeature = cssFeatures[i];
-        var cssSupported = featuresData[cssFeature.key];
-        html += '<tr>';
-        html += '<td><strong>' + cssFeature.name + '</strong></td>';
-        html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">';
-        html += cssSupported ? '✅ 支持' : '❌ 不支持';
-        html += '</td>';
-        html += '<td><small>' + cssFeature.desc + '</small></td>';
-        html += '</tr>';
-      }
-
-      html += '</table>';
-      return html;
     },
 
     // ================ 显示辅助函数 ================
@@ -2881,6 +2780,26 @@
           }
         });
       }
+      /*
+      // 页面加载时检查是否有分享链接
+      window.onload = function() {
+        var sharedData = self.parseShareFromUrl();
+        if (sharedData) {
+          // 可以在这里显示分享的数据
+          // 可以添加一个提示，比如："正在查看分享的检测结果"
+        }
+
+        // 原有的检测逻辑
+        if (window.Vue3Detector && window.Vue3Detector.runDetection) {
+          window.Vue3Detector.runDetection();
+        } else {
+          document.getElementById('result').innerHTML =
+            '<p style="color: red;">检测脚本加载失败，请刷新页面重试。</p>';
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('result').style.display = 'block';
+        }
+      };
+      */
     },
   };
 
