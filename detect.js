@@ -2796,7 +2796,7 @@
 
       // 更新模态框内容
       document.getElementById('share-link-input').value = shareData.url;
-      document.getElementById('share-id').textContent = shareData.id;
+      // document.getElementById('share-id').textContent = shareData.id;
 
       // 生成二维码
       this.generateQRCode(shareData.url);
