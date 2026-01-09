@@ -1502,6 +1502,31 @@
       html += '<table class="info-table">';
       html += '<tr><th>类别</th><th>项目</th><th>检测值</th><th>状态</th></tr>';
 
+      // 核心特性支持
+      html += '<tr><td rowspan="4">Vue3 核心特性</td>';
+      html += '<td>Proxy API</td><td>' + (results.features.es6.proxy ? '支持' : '不支持') + '</td>';
+      html += '<td>' + (results.features.es6.proxy ? '✅' : '❌') + '</td></tr>';
+
+      html += '<tr><td>Reflect API</td><td>' + (results.features.es6.reflect ? '支持' : '不支持') + '</td>';
+      html += '<td>' + (results.features.es6.reflect ? '✅' : '❌') + '</td></tr>';
+
+      html += '<tr><td>Promise</td><td>' + (results.features.es6.promise ? '支持' : '不支持') + '</td>';
+      html += '<td>' + (results.features.es6.promise ? '✅' : '⚠️') + '</td></tr>';
+
+      html += '<tr><td>Symbol</td><td>' + (results.features.es6.symbol ? '支持' : '不支持') + '</td>';
+      html += '<td>' + (results.features.es6.symbol ? '✅' : '⚠️') + '</td></tr>';
+
+      // CSS 特性
+      html += '<tr><td rowspan="3">CSS 特性</td>';
+      html += '<td>Flexbox</td><td>' + (results.features.css.flexbox ? '支持' : '不支持') + '</td>';
+      html += '<td>' + (results.features.css.flexbox ? '✅' : '⚠️') + '</td></tr>';
+
+      html += '<tr><td>CSS Grid</td><td>' + (results.features.css.grid ? '支持' : '不支持') + '</td>';
+      html += '<td>' + (results.features.css.grid ? '✅' : '⚠️') + '</td></tr>';
+
+      html += '<tr><td>CSS 变量</td><td>' + (results.features.css.cssVariables ? '支持' : '不支持') + '</td>';
+      html += '<td>' + (results.features.css.cssVariables ? '✅' : '⚠️') + '</td></tr>';
+
       // 浏览器信息
       html += '<tr><td rowspan="4">浏览器</td>';
       html += '<td>类型</td><td>' + results.browser.name + '</td>';
@@ -1563,31 +1588,6 @@
       html += '<tr><td>内存</td><td>' + this.formatHardwareValue(results.hardware.memory) + '</td><td>💾</td></tr>';
 
       html += '<tr><td>屏幕分辨率</td><td>' + results.hardware.screen.width + '×' + results.hardware.screen.height + '</td><td>🖥️</td></tr>';
-
-      // 核心特性支持
-      html += '<tr><td rowspan="4">Vue3 核心特性</td>';
-      html += '<td>Proxy API</td><td>' + (results.features.es6.proxy ? '支持' : '不支持') + '</td>';
-      html += '<td>' + (results.features.es6.proxy ? '✅' : '❌') + '</td></tr>';
-
-      html += '<tr><td>Reflect API</td><td>' + (results.features.es6.reflect ? '支持' : '不支持') + '</td>';
-      html += '<td>' + (results.features.es6.reflect ? '✅' : '❌') + '</td></tr>';
-
-      html += '<tr><td>Promise</td><td>' + (results.features.es6.promise ? '支持' : '不支持') + '</td>';
-      html += '<td>' + (results.features.es6.promise ? '✅' : '⚠️') + '</td></tr>';
-
-      html += '<tr><td>Symbol</td><td>' + (results.features.es6.symbol ? '支持' : '不支持') + '</td>';
-      html += '<td>' + (results.features.es6.symbol ? '✅' : '⚠️') + '</td></tr>';
-
-      // CSS 特性
-      html += '<tr><td rowspan="3">CSS 特性</td>';
-      html += '<td>Flexbox</td><td>' + (results.features.css.flexbox ? '支持' : '不支持') + '</td>';
-      html += '<td>' + (results.features.css.flexbox ? '✅' : '⚠️') + '</td></tr>';
-
-      html += '<tr><td>CSS Grid</td><td>' + (results.features.css.grid ? '支持' : '不支持') + '</td>';
-      html += '<td>' + (results.features.css.grid ? '✅' : '⚠️') + '</td></tr>';
-
-      html += '<tr><td>CSS 变量</td><td>' + (results.features.css.cssVariables ? '支持' : '不支持') + '</td>';
-      html += '<td>' + (results.features.css.cssVariables ? '✅' : '⚠️') + '</td></tr>';
 
       html += '</table>';
       html += '</div>';
