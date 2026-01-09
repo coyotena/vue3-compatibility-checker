@@ -874,27 +874,172 @@
     },
 
     // ================ 硬件信息检测 ================
-    detectHardwareInfo: function () {
+    detectHardwareInfo: function() {
       var hardware = {
-        cpuCores: 'Unknown', memory: 'Unknown', screen: {
-          width: window.screen.width,
-          height: window.screen.height,
-          colorDepth: window.screen.colorDepth,
+        cpuCores: 'Unknown',
+        memory: 'Unknown',
+        screen: {
+          width: window.screen.width || 0,
+          height: window.screen.height || 0,
+          colorDepth: window.screen.colorDepth || 0,
           pixelRatio: window.devicePixelRatio || 1,
+          availWidth: window.screen.availWidth || 0,
+          availHeight: window.screen.availHeight || 0
         },
+        gpu: {
+          webgl: this.testWebGLSupport(),
+          webglVersion: 'Unknown'
+        },
+        detectionNotes: [] // 记录检测限制说明
       };
 
-      // CPU核心数
-      if (navigator.hardwareConcurrency) {
-        hardware.cpuCores = navigator.hardwareConcurrency;
+      // ===== 1. CPU 核心数检测 =====
+      try {
+        if (navigator.hardwareConcurrency) {
+          // Safari 6.1+ 支持 hardwareConcurrency
+          hardware.cpuCores = navigator.hardwareConcurrency;
+        } else {
+          hardware.cpuCores = '无法检测';
+          hardware.detectionNotes.push('CPU核心数: 浏览器不支持 navigator.hardwareConcurrency');
+        }
+      } catch (e) {
+        hardware.cpuCores = '检测失败';
+        console.warn('CPU核心数检测失败:', e.message);
       }
 
-      // 内存大小（只有部分浏览器支持）
-      if (navigator.deviceMemory) {
-        hardware.memory = navigator.deviceMemory + ' GB';
+      // ===== 2. 内存检测 =====
+      try {
+        // 方法1：使用 navigator.deviceMemory（只有 Chrome 等支持）
+        if (navigator.deviceMemory) {
+          hardware.memory = navigator.deviceMemory + ' GB';
+        }
+        // 方法2：Safari 和其他浏览器的回退方案
+        else {
+          hardware.memory = '无法检测';
+          hardware.detectionNotes.push('内存大小: 浏览器不支持 navigator.deviceMemory');
+
+          // 可以根据浏览器类型给出提示
+          var browserName = this.results.browser.name;
+          if (browserName.indexOf('Safari') > -1) {
+            hardware.memory = 'Safari 不支持内存检测';
+          } else if (browserName.indexOf('Firefox') > -1) {
+            hardware.memory = 'Firefox 不支持内存检测';
+          } else if (browserName.indexOf('IE') > -1 ||
+            browserName.indexOf('Edge') > -1) {
+            hardware.memory = '此浏览器不支持内存检测';
+          }
+        }
+      } catch (e) {
+        hardware.memory = '检测失败';
+        console.warn('内存检测失败:', e.message);
       }
+
+      // ===== 3. WebGL 和 GPU 信息 =====
+      try {
+        var glInfo = this.getWebGLInfo();
+        hardware.gpu.webgl = glInfo.supported;
+        hardware.gpu.webglVersion = glInfo.version;
+        hardware.gpu.vendor = glInfo.vendor;
+        hardware.gpu.renderer = glInfo.renderer;
+
+        if (!glInfo.supported) {
+          hardware.detectionNotes.push('WebGL: 不支持或已禁用');
+        }
+      } catch (e) {
+        hardware.gpu.webgl = false;
+        hardware.gpu.webglVersion = '检测失败';
+        console.warn('WebGL检测失败:', e.message);
+      }
+
+      // ===== 4. 其他硬件信息 =====
+
+      // 时区信息（虽然不是硬件，但有用）
+      hardware.timezone = {
+        offset: new Date().getTimezoneOffset(),
+        name: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown'
+      };
+
+      // 电池信息（如果支持）
+      if ('getBattery' in navigator) {
+        try {
+          // 注意：这是异步的，我们不在这里等待
+          hardware.batterySupported = true;
+        } catch (e) {
+          hardware.batterySupported = false;
+        }
+      }
+
+      // 在线状态
+      hardware.online = navigator.onLine;
+
+      // 连接信息（如果支持）
+      if ('connection' in navigator) {
+        var conn = navigator.connection;
+        hardware.connection = {
+          type: conn.type || 'unknown',
+          effectiveType: conn.effectiveType || 'unknown',
+          downlink: conn.downlink || 'unknown',
+          rtt: conn.rtt || 'unknown',
+          saveData: conn.saveData || false
+        };
+      }
+
+      console.log('硬件检测完成:', {
+        cpuCores: hardware.cpuCores,
+        memory: hardware.memory,
+        webgl: hardware.gpu.webgl,
+        notes: hardware.detectionNotes.length
+      });
 
       return hardware;
+    },
+
+    // ================ 获取 WebGL 详细信息 ================
+    getWebGLInfo: function() {
+      var result = {
+        supported: false,
+        version: 'Unknown',
+        vendor: 'Unknown',
+        renderer: 'Unknown'
+      };
+
+      try {
+        var canvas = document.createElement('canvas');
+        var gl = null;
+
+        // 尝试获取 WebGL 上下文
+        var contexts = [
+          { name: 'webgl2', context: canvas.getContext('webgl2') },
+          { name: 'webgl', context: canvas.getContext('webgl') },
+          { name: 'experimental-webgl', context: canvas.getContext('experimental-webgl') }
+        ];
+
+        for (var i = 0; i < contexts.length; i++) {
+          if (contexts[i].context) {
+            gl = contexts[i].context;
+            result.version = contexts[i].name;
+            result.supported = true;
+            break;
+          }
+        }
+
+        if (gl) {
+          // 获取 GPU 信息
+          var debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+          if (debugInfo) {
+            result.vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'Unknown';
+            result.renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'Unknown';
+          } else {
+            // 回退：尝试其他方法获取信息
+            result.vendor = gl.getParameter(gl.VENDOR) || 'Unknown';
+            result.renderer = gl.getParameter(gl.RENDERER) || 'Unknown';
+          }
+        }
+      } catch (e) {
+        console.log('WebGL 信息获取失败:', e.message);
+      }
+
+      return result;
     },
 
     // ================ 特性支持检测 ================
@@ -1413,9 +1558,9 @@
 
       // 硬件信息
       html += '<tr><td rowspan="3">硬件</td>';
-      html += '<td>CPU 核心</td><td>' + results.hardware.cpuCores + '</td><td>⚙️</td></tr>';
+      html += '<td>CPU 核心</td><td>' + this.formatHardwareValue(results.hardware.cpuCores) + '</td><td>⚙️</td></tr>';
 
-      html += '<tr><td>内存</td><td>' + results.hardware.memory + '</td><td>💾</td></tr>';
+      html += '<tr><td>内存</td><td>' + this.formatHardwareValue(results.hardware.memory) + '</td><td>💾</td></tr>';
 
       html += '<tr><td>屏幕分辨率</td><td>' + results.hardware.screen.width + '×' + results.hardware.screen.height + '</td><td>🖥️</td></tr>';
 
@@ -1575,6 +1720,23 @@
     },
 
     // ================ 显示辅助函数 ================
+    formatHardwareValue: function(value) {
+      if (value === 'Unknown' || value === '无法检测' ||
+        value === '检测失败' || value === 'Safari 不支持内存检测') {
+        return '<span class="hardware-unknown">' + this.escapeHtml(value) + '</span>';
+      }
+      return this.escapeHtml(value);
+    },
+
+    getHardwareStatusIcon: function(value, type) {
+      if (value === 'Unknown' || value === '无法检测' || value === '检测失败') {
+        return '❓';
+      }
+      if (value === 'Safari 不支持内存检测' && type === 'memory') {
+        return '⚠️';
+      }
+      return '⚙️';
+    },
     getStatusIcon: function (supported) {
       return supported ? '✅' : '❌';
     },
