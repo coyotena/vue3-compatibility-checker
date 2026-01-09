@@ -2733,39 +2733,29 @@
 
     // ================ 分享功能 ================
     // 生成分享数据
+    // 修改 generateShareData 函数
     generateShareData: function() {
-      // 创建精简的分享数据（避免太大）
+      // 只分享关键信息，大大缩短数据
       var shareData = {
-        v: '1.0', // 版本
-        t: new Date().getTime(), // 时间戳
-        c: this.results.compatibility.level, // 兼容性级别
-        b: {
-          n: this.results.browser.name,
-          v: this.results.browser.version,
-          e: this.results.browser.engine
-        },
-        o: {
-          n: this.results.os.name,
-          v: this.results.os.version
-        },
-        f: {
-          p: this.results.features.es6.proxy,
-          r: this.results.features.es6.reflect
-        }
+        v: '2.0', // 版本
+        t: Date.now().toString(36), // 时间戳用36进制缩短
+        c: this.results.compatibility.level.substring(0, 1), // 只取第一个字母：c/p/i
+        b: this.results.browser.name.substring(0, 3) +
+          Math.floor(this.results.browser.version || 0), // 浏览器简写+版本
       };
 
-      // 转换为 Base64 编码的字符串
+      // 使用更短的编码
       var jsonStr = JSON.stringify(shareData);
-      var base64Str = btoa(encodeURIComponent(jsonStr));
-
-      // 生成分享 ID（短版本）
-      var shareId = this.generateShareId();
+      // 使用更URL友好的编码
+      var encoded = btoa(jsonStr)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, ''); // 移除等号
 
       return {
         data: shareData,
-        base64: base64Str,
-        id: shareId,
-        url: this.generateShareUrl(base64Str, shareId)
+        encoded: encoded,
+        url: window.location.origin + window.location.pathname + '?s=' + encoded
       };
     },
 
