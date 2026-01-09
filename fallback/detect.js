@@ -685,53 +685,190 @@
     },
 
     // ================ 操作系统检测 ================
-    detectOSInfo: function () {
-      var ua = navigator.userAgent;
+    detectOSInfo: function() {
+      var ua = navigator.userAgent.toLowerCase();
       var platform = navigator.platform || '';
+      var appVersion = navigator.appVersion || '';
+
       var os = {
-        name: 'Unknown', version: 'Unknown', architecture: 'Unknown', platform: platform,
+        name: 'Unknown',
+        version: 'Unknown',
+        platform: platform,
+        bits: 'Unknown',           // 系统位数（32/64）
+        detectionConfidence: 'low' // 检测置信度：high/medium/low
       };
 
+      // ===== 1. 检测操作系统类型和版本 =====
+
       // Windows
-      if (platform.indexOf('Win') > -1 || ua.indexOf('Windows') > -1) {
+      if (platform.indexOf('Win') > -1 || ua.indexOf('windows') > -1) {
         os.name = 'Windows';
 
         // Windows 版本检测
-        if (ua.indexOf('Windows NT 10.0') > -1) os.version = '10'; else if (ua.indexOf('Windows NT 6.3') > -1) os.version = '8.1'; else if (ua.indexOf('Windows NT 6.2') > -1) os.version = '8'; else if (ua.indexOf('Windows NT 6.1') > -1) os.version = '7'; else if (ua.indexOf('Windows NT 6.0') > -1) os.version = 'Vista'; else if (ua.indexOf('Windows NT 5.1') > -1) os.version = 'XP'; else if (ua.indexOf('Windows NT 5.0') > -1) os.version = '2000'; else os.version = 'Unknown';
+        if (ua.indexOf('windows nt 10.0') > -1) os.version = '10';
+        else if (ua.indexOf('windows nt 6.3') > -1) os.version = '8.1';
+        else if (ua.indexOf('windows nt 6.2') > -1) os.version = '8';
+        else if (ua.indexOf('windows nt 6.1') > -1) os.version = '7';
+        else if (ua.indexOf('windows nt 6.0') > -1) os.version = 'Vista';
+        else if (ua.indexOf('windows nt 5.1') > -1) os.version = 'XP';
+        else if (ua.indexOf('windows nt 5.0') > -1) os.version = '2000';
+        else if (ua.indexOf('windows nt') > -1) {
+          var match = ua.match(/windows nt (\d+\.\d+)/);
+          if (match) os.version = match[1];
+        }
       }
       // macOS
-      else if (platform.indexOf('Mac') > -1 || ua.indexOf('Mac OS') > -1) {
+      else if (platform.indexOf('Mac') > -1 || ua.indexOf('mac os') > -1) {
         os.name = 'macOS';
-        var match = ua.match(/Mac OS X (\d+[._]\d+[._]?\d*)/);
-        if (match) os.version = match[1].replace(/_/g, '.');
+        var match = ua.match(/mac os x (\d+[._]\d+[._]?\d*)/);
+        if (match) {
+          os.version = match[1].replace(/_/g, '.');
+          os.detectionConfidence = 'high';
+        }
       }
       // Linux
-      else if (platform.indexOf('Linux') > -1 || ua.indexOf('Linux') > -1) {
+      else if (platform.indexOf('Linux') > -1 || ua.indexOf('linux') > -1) {
         os.name = 'Linux';
         // 尝试检测具体发行版
-        if (ua.indexOf('Ubuntu') > -1) os.version = 'Ubuntu'; else if (ua.indexOf('Fedora') > -1) os.version = 'Fedora'; else if (ua.indexOf('CentOS') > -1) os.version = 'CentOS'; else if (ua.indexOf('Debian') > -1) os.version = 'Debian'; else os.version = 'Unknown';
-      }
-      // Android
-      else if (ua.indexOf('Android') > -1) {
-        os.name = 'Android';
-        var match = ua.match(/Android (\d+\.?\d*)/);
-        if (match) os.version = match[1];
+        if (ua.indexOf('ubuntu') > -1) os.version = 'Ubuntu';
+        else if (ua.indexOf('fedora') > -1) os.version = 'Fedora';
+        else if (ua.indexOf('centos') > -1) os.version = 'CentOS';
+        else if (ua.indexOf('debian') > -1) os.version = 'Debian';
+        else if (ua.indexOf('android') > -1) {
+          os.name = 'Android';
+          var match = ua.match(/android (\d+\.?\d*)/);
+          if (match) os.version = match[1];
+        }
+        else os.version = 'Unknown';
       }
       // iOS
-      else if (ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1) {
+      else if (ua.indexOf('iphone') > -1 || ua.indexOf('ipad') > -1) {
         os.name = 'iOS';
-        var match = ua.match(/OS (\d+[._]\d+)/);
+        var match = ua.match(/os (\d+[._]\d+)/);
         if (match) os.version = match[1].replace(/_/g, '.');
+        os.detectionConfidence = 'high';
       }
 
-      // 检测系统架构（有限支持）
-      if (ua.indexOf('Win64') > -1 || ua.indexOf('x64') > -1) {
-        os.architecture = '64-bit';
-      } else if (ua.indexOf('WOW64') > -1) {
-        os.architecture = '32-bit on 64-bit';
-      } else if (platform.indexOf('Win32') > -1) {
-        os.architecture = '32-bit';
+      // ===== 2. 增强系统位数检测 =====
+
+      var detectedBits = null;
+      var confidence = 'low';
+      var detectionMethod = '未知';
+
+      // 方法1：通过 User Agent 明确标识
+      if (ua.indexOf('win64') > -1 || ua.indexOf('x64') > -1 ||
+        ua.indexOf('amd64') > -1 || ua.indexOf('wow64') > -1) {
+        detectedBits = '64-bit';
+        confidence = 'high';
+        detectionMethod = 'User Agent 标识';
       }
+      // 方法2：Windows 特定检测
+      else if (os.name === 'Windows') {
+        if (ua.indexOf('win64') > -1 || ua.indexOf('x64') > -1) {
+          detectedBits = '64-bit';
+          confidence = 'high';
+          detectionMethod = 'Windows 64位标识';
+        }
+        else if (ua.indexOf('wow64') > -1) {
+          detectedBits = '32-bit (运行在64位系统上)';
+          confidence = 'high';
+          detectionMethod = 'WOW64 标识';
+        }
+        else if (ua.indexOf('win32') > -1 || ua.indexOf('x86') > -1) {
+          detectedBits = '32-bit';
+          confidence = 'medium';
+          detectionMethod = 'Windows 32位标识';
+        }
+      }
+      // 方法3：macOS 检测（现代 macOS 都是 64 位）
+      else if (os.name === 'macOS') {
+        if (os.version !== 'Unknown') {
+          var versionNum = parseFloat(os.version.split('.')[0]);
+          // macOS 10.6 (Snow Leopard) 开始支持 64 位
+          // macOS 10.15 (Catalina) 开始仅支持 64 位
+          if (versionNum >= 10.15) {
+            detectedBits = '64-bit (仅支持64位)';
+            confidence = 'high';
+            detectionMethod = 'macOS 版本推断';
+          } else if (versionNum >= 10.6) {
+            detectedBits = '64-bit (可能)';
+            confidence = 'medium';
+            detectionMethod = 'macOS 版本推断';
+          }
+        }
+      }
+      // 方法4：Linux 检测
+      else if (os.name === 'Linux') {
+        if (ua.indexOf('x86_64') > -1 || ua.indexOf('x64') > -1) {
+          detectedBits = '64-bit';
+          confidence = 'high';
+          detectionMethod = 'Linux 架构标识';
+        }
+        else if (ua.indexOf('i686') > -1 || ua.indexOf('i386') > -1) {
+          detectedBits = '32-bit';
+          confidence = 'medium';
+          detectionMethod = 'Linux 架构标识';
+        }
+        // Android 通常是 64 位（新设备）
+        else if (os.name === 'Android') {
+          if (parseFloat(os.version) >= 5.0) {
+            detectedBits = '64-bit (可能)';
+            confidence = 'medium';
+            detectionMethod = 'Android 版本推断';
+          }
+        }
+      }
+      // 方法5：iOS 检测（都是 64 位，iPhone 5s 之后）
+      else if (os.name === 'iOS') {
+        if (parseFloat(os.version) >= 7.0) {
+          detectedBits = '64-bit (iOS 7+ 支持)';
+          confidence = 'high';
+          detectionMethod = 'iOS 版本推断';
+        }
+      }
+
+      // 方法6：通过 navigator 属性（有限支持）
+      if (!detectedBits && navigator.cpuClass) {
+        detectedBits = navigator.cpuClass.indexOf('64') > -1 ? '64-bit' : '32-bit';
+        confidence = 'medium';
+        detectionMethod = 'navigator.cpuClass';
+      }
+
+      // 方法7：通过用户代理中的通用线索
+      if (!detectedBits) {
+        // 如果用户代理中包含 "64" 但不包含 "WOW64"
+        if (appVersion.indexOf('64') > -1 && appVersion.indexOf('WOW64') === -1) {
+          detectedBits = '64-bit (可能)';
+          confidence = 'low';
+          detectionMethod = 'User Agent 数字推断';
+        }
+      }
+
+      // 最终结果
+      if (detectedBits) {
+        os.bits = detectedBits;
+        os.detectionConfidence = confidence;
+        os.bitsDetectionMethod = detectionMethod;
+      } else {
+        os.bits = '无法确定';
+        os.detectionConfidence = 'low';
+        os.bitsDetectionMethod = '无可靠标识';
+      }
+
+      // 简化显示版本（用于界面显示）
+      os.architecture = os.bits;
+
+      // 如果是低置信度，添加说明
+      if (confidence === 'low') {
+        os.bitsNote = '检测结果仅供参考，实际系统可能不同';
+      }
+
+      console.log('系统位数检测结果:', {
+        bits: os.bits,
+        confidence: confidence,
+        method: detectionMethod,
+        note: os.bitsNote || '无'
+      });
 
       return os;
     },
@@ -1246,7 +1383,33 @@
       html += '<tr><td>版本</td><td>' + results.os.version + '</td>';
       html += '<td>' + this.getOSStatus(results.os) + '</td></tr>';
 
-      html += '<tr><td>架构</td><td>' + results.os.architecture + '</td><td>🔧</td></tr>';
+      html += '<tr><td>系统位数</td><td>';
+
+      // 显示系统位数和检测置信度
+      html += this.escapeHtml(results.os.bits);
+
+      // 如果是低置信度，添加说明图标
+      if (results.os.detectionConfidence === 'low' ||
+        results.os.bits === '无法确定') {
+        html += ' <span class="low-confidence" title="检测置信度较低，结果仅供参考">⚠️</span>';
+      }
+
+      html += '</td>';
+
+      // 状态列显示
+      html += '<td>';
+      if (results.os.bits === '无法确定') {
+        html += '❓';
+      } else if (results.os.detectionConfidence === 'low') {
+        html += '⚠️';
+      } else if (results.os.detectionConfidence === 'medium') {
+        html += '✅';
+      } else if (results.os.detectionConfidence === 'high') {
+        html += '✅';
+      } else {
+        html += '🔧';
+      }
+      html += '</td></tr>';
 
       // 硬件信息
       html += '<tr><td rowspan="3">硬件</td>';
@@ -1387,6 +1550,23 @@
       html += '<li>✅ 完全支持 | ⚠️ 部分支持/可能有问题 | ❌ 不支持</li>';
       html += '<li>以上检测基于 Vue3 官方兼容标准</li>';
       html += '<li>建议使用 Chrome 64+、Firefox 59+、Safari 11+、Edge 79+ 等现代浏览器</li>';
+      html += '</ul>';
+      html += '</div>';
+
+      html += '<div class="footer-notes">';
+      html += '<p><strong>说明：</strong></p>';
+      html += '<ul>';
+      html += '<li>✅ 完全支持 | ⚠️ 部分支持/可能有问题 | ❌ 不支持</li>';
+      html += '<li>❓ 无法确定 | 🔧 技术信息</li>';
+
+      // 如果系统位数检测置信度低，添加特殊说明
+      if (results.os.detectionConfidence === 'low' ||
+        results.os.bits === '无法确定') {
+        html += '<li>⚠️ 系统位数检测受浏览器安全限制，结果可能不准确</li>';
+        html += '<li>💡 现代操作系统（Windows 10+, macOS 10.6+, 主流 Linux）通常为 64 位</li>';
+      }
+
+      html += '<li>Vue3 对系统位数无特殊要求，32/64 位均可运行</li>';
       html += '</ul>';
       html += '</div>';
 

@@ -646,3 +646,23 @@ h1 {
   word-break: break-all;
   color: #42b883;
 }
+/* 系统位数检测置信度样式 */
+.low-confidence {
+  color: #ff9800;
+  cursor: help;
+  font-size: 14px;
+  margin-left: 5px;
+}
+
+.low-confidence:hover::after {
+  content: '系统位数检测受浏览器限制，结果仅供参考。现代操作系统通常为64位。';
+  position: absolute;
+  background: #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-width: 300px;
+  z-index: 1000;
+  margin-top: 5px;
+}
