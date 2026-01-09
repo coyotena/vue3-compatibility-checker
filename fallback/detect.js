@@ -1782,33 +1782,38 @@
       var container = document.getElementById('qrcode-container');
       container.innerHTML = '<p>正在生成二维码...</p>';
 
-      // 检查浏览器是否支持 canvas（QRCode.js 需要）
-      var hasCanvasSupport = !!document.createElement('canvas').getContext;
+      var self = this;
 
-      // 检查 QRCode 库是否加载成功
-      var hasQRCodeLib = typeof QRCode !== 'undefined';
+      setTimeout(function() {
+        try {
+          // 清空容器
+          container.innerHTML = '';
 
-      if (hasCanvasSupport && hasQRCodeLib) {
-        // 使用 QRCode.js 生成二维码
-        setTimeout(function() {
-          try {
-            container.innerHTML = '';
-            new QRCode(container, {
-              text: url,
-              width: 180,
-              height: 180,
-              colorDark: '#000000',
-              colorLight: '#ffffff',
-              correctLevel: QRCode.CorrectLevel.H
-            });
-          } catch (error) {
-            self.showQRCodeFallback(container, url, error);
-          }
-        }, 100);
-      } else {
-        // 显示回退方案
-        this.showQRCodeFallback(container, url);
-      }
+          // 尝试使用 QRCode.js
+          new QRCode(container, {
+            text: url,
+            width: 180,
+            height: 180,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+
+          console.log('二维码生成成功');
+
+        } catch (error) {
+          console.log('二维码生成失败，使用回退方案:', error.message);
+
+          // 显示回退界面
+          container.innerHTML = '<div class="qrcode-fallback">' +
+            '<p><strong>📱 分享链接</strong></p>' +
+            '<div class="fallback-link">' +
+            '<p class="mono-link">' + self.escapeHtml(url) + '</p>' +
+            '</div>' +
+            '<p><small>复制此链接分享，或使用其他工具生成二维码</small></p>' +
+            '</div>';
+        }
+      }, 100);
     },
 
     // 二维码生成失败时的回退显示
