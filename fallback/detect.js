@@ -67,6 +67,125 @@
       return false;
     }
   }
+
+  // 1. 检测是否支持 classList
+  var hasClassList = 'classList' in document.createElement('div');
+
+// 2. 兼容的 addClass 函数
+  function addClass(element, className) {
+    if (!element) return;
+
+    if (hasClassList) {
+      element.classList.add(className);
+    } else {
+      // IE8-9 兼容
+      var current = element.className;
+      if (current.indexOf(className) === -1) {
+        element.className = current + (current ? ' ' : '') + className;
+      }
+    }
+  }
+
+// 3. 兼容的 removeClass 函数
+  function removeClass(element, className) {
+    if (!element) return;
+
+    if (hasClassList) {
+      element.classList.remove(className);
+    } else {
+      // IE8-9 兼容
+      var current = element.className;
+      var newClassName = current.replace(
+        new RegExp('(^|\\s)' + className + '(\\s|$)', 'g'),
+        '$1$2'
+      ).replace(/\s+/g, ' ').trim();
+      element.className = newClassName;
+    }
+  }
+
+// 4. 兼容的 hasClass 函数
+  function hasClass(element, className) {
+    if (!element) return false;
+
+    if (hasClassList) {
+      return element.classList.contains(className);
+    } else {
+      // IE8-9 兼容
+      return new RegExp('(^|\\s)' + className + '(\\s|$)').test(element.className);
+    }
+  }
+
+// 5. 兼容的 toggleClass 函数
+  function toggleClass(element, className) {
+    if (!element) return;
+
+    if (hasClassList) {
+      element.classList.toggle(className);
+    } else {
+      if (hasClass(element, className)) {
+        removeClass(element, className);
+      } else {
+        addClass(element, className);
+      }
+    }
+  }
+
+// 6. 兼容的 setClass 函数（设置特定类，移除其他）
+  function setClass(element, className) {
+    if (!element) return;
+    element.className = className;
+  }
+
+  // 1. 兼容的事件绑定函数
+  function addEvent(element, eventName, handler) {
+    if (!element) return;
+
+    if (element.addEventListener) {
+      // 现代浏览器
+      element.addEventListener(eventName, handler, false);
+    } else if (element.attachEvent) {
+      // IE8 及以下
+      element.attachEvent('on' + eventName, handler);
+    } else {
+      // 非常老的浏览器
+      element['on' + eventName] = handler;
+    }
+  }
+
+  // 2. 兼容的事件移除函数
+  function removeEvent(element, eventName, handler) {
+    if (!element) return;
+
+    if (element.removeEventListener) {
+      element.removeEventListener(eventName, handler, false);
+    } else if (element.detachEvent) {
+      element.detachEvent('on' + eventName, handler);
+    } else {
+      element['on' + eventName] = null;
+    }
+  }
+
+  // 3. DOM 就绪检测（替代 DOMContentLoaded）
+  function domReady(callback) {
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      // 已经加载完成
+      setTimeout(callback, 1);
+    } else if (document.addEventListener) {
+      // 现代浏览器
+      document.addEventListener('DOMContentLoaded', callback);
+    } else if (document.attachEvent) {
+      // IE8 及以下
+      document.attachEvent('onreadystatechange', function() {
+        if (document.readyState === 'complete') {
+          callback();
+        }
+      });
+    } else {
+      // 最后手段
+      window.onload = callback;
+    }
+  }
+
   // 全局对象
   var Vue3Detector = {
     // 检测结果存储
@@ -154,12 +273,6 @@
           // 下载文件
           if (downloadFile(jsonString, fileName, 'application/json')) {
             showExportFeedback('✅ 结果已导出为 JSON 文件', 'success');
-            console.log('JSON 导出成功:', fileName);
-            console.log('导出数据结构:', {
-              hasES2017: !!exportData.detection.features.es2017,
-              hasWebAPIs: !!exportData.detection.features.webAPIs,
-              webgl: exportData.detection.features.webAPIs.webgl
-            });
           } else {
             showExportFeedback('❌ 导出失败，请重试', 'error');
           }
@@ -592,7 +705,6 @@
           // 下载文件
           if (downloadFile(htmlContent, fileName, 'text/html')) {
             showExportFeedback('✅ HTML 报告已生成并下载', 'success');
-            console.log('HTML 导出成功:', fileName);
 
             // 可选：在新标签页预览
             var previewWindow = window.open();
@@ -610,7 +722,6 @@
       },
     // ================ 主入口 ================
     runDetection: function () {
-      console.log('开始 Vue3 兼容性检测...');
 
       // 记录检测时间
       this.results.detectionTime = new Date().toLocaleString();
@@ -635,7 +746,6 @@
 
     // ================ 信息收集 ================
     collectAllInfo: function () {
-      console.log('收集环境信息...');
 
       // 1. 浏览器信息
       this.results.browser = this.detectBrowserInfo();
@@ -944,13 +1054,6 @@
         os.bitsNote = '检测结果仅供参考，实际系统可能不同';
       }
 
-      console.log('系统位数检测结果:', {
-        bits: os.bits,
-        confidence: confidence,
-        method: detectionMethod,
-        note: os.bitsNote || '无'
-      });
-
       return os;
     },
 
@@ -1065,13 +1168,6 @@
         };
       }
 
-      console.log('硬件检测完成:', {
-        cpuCores: hardware.cpuCores,
-        memory: hardware.memory,
-        webgl: hardware.gpu.webgl,
-        notes: hardware.detectionNotes.length
-      });
-
       return hardware;
     },
 
@@ -1099,11 +1195,9 @@
         var result = testFn();
         if (!(result instanceof Promise)) return false;
 
-        console.log('async/await 检测通过');
         return true;
 
       } catch (error) {
-        console.log('async/await 检测失败:', error.message);
         return false;
       }
     },
@@ -1182,7 +1276,6 @@
           }
         }
       } catch (e) {
-        console.log('WebGL 检测失败:', e.message);
       }
 
       return result;
@@ -1293,10 +1386,6 @@
           es6Modules: 'noModule' in HTMLScriptElement.prototype,
           dynamicImport: this.testDynamicImport()
         };
-        console.log('特性检测完成:', {
-          es6: Object.keys(features.es6).filter(k => features.es6[k]).length + '/' + Object.keys(features.es6).length,
-          webAPIs: Object.keys(features.webAPIs).filter(k => features.webAPIs[k]).length + '/' + Object.keys(features.webAPIs).length
-        });
 
         // ====================================================
         // 🛠️ 兼容性修复：确保重要属性在根级别也存在
@@ -1356,8 +1445,6 @@
         if (features.es2016 && features.es2016.arrayPrototypeIncludes !== undefined) {
           features.es6.arrayPrototypeIncludes = features.es2016.arrayPrototypeIncludes;
         }
-
-        console.log('✅ 兼容性修复完成，所有属性路径已统一');
 
         // ====================================================
         // 结束兼容性修复
@@ -1688,12 +1775,6 @@
         info: infoIssues
       };
 
-      console.log('兼容性分析完成:', {
-        level: this.results.compatibility.level,
-        critical: criticalIssues.length,
-        warning: warningIssues.length,
-        info: infoIssues.length
-      });
     },
 
     // ================ 显示相关 ================
@@ -1708,14 +1789,25 @@
     },
 
     showError: function (message) {
+      var self = this;
       var html = '<div class="error">';
       html += '<h3 style="color: red;">检测失败</h3>';
       html += '<p>' + (message || '未知错误') + '</p>';
-      html += '<button onclick="location.reload()">刷新重试</button>';
+      html += '<button id="reload-btn">刷新重试</button>'; // 改为使用id
       html += '</div>';
 
       document.getElementById('result').innerHTML = html;
       this.showLoading(false);
+
+      // 延迟绑定事件，确保DOM已更新
+      setTimeout(function() {
+        var reloadBtn = document.getElementById('reload-btn');
+        if (reloadBtn) {
+          addEvent(reloadBtn, 'click', function() {
+            location.reload();
+          });
+        }
+      }, 10);
     },
 
     escapeHtml: function(text) {
@@ -1751,9 +1843,11 @@
       subtitleEl.textContent = texts[level] || '检测完成';
 
       // 移除旧的状态类
-      subtitleEl.classList.remove('compatible', 'partial', 'incompatible');
+      removeClass(subtitleEl, 'compatible');
+      removeClass(subtitleEl, 'partial');
+      removeClass(subtitleEl, 'incompatible');
       // 添加新的状态类
-      subtitleEl.classList.add(level);
+      addClass(subtitleEl, level);
     },
     // ================ 显示完整结果 ================
     displayResults: function () {
@@ -2161,8 +2255,6 @@
       var detailedIssues = compatibility.detailedIssues;
       var suggestions = [];
 
-      console.log('生成建议，兼容性等级:', compatibility.level);
-
       // ===== 1. 根据兼容性等级生成主建议 =====
 
       if (compatibility.level === 'incompatible') {
@@ -2504,7 +2596,6 @@
       // 显示模态框
       document.getElementById('share-modal').style.display = 'flex';
 
-      console.log('分享数据已生成:', shareData);
     },
 
     // 生成二维码（简单实现，如果可用则使用，否则显示提示）
@@ -2529,10 +2620,7 @@
             correctLevel: QRCode.CorrectLevel.H
           });
 
-          console.log('二维码生成成功');
-
         } catch (error) {
-          console.log('二维码生成失败，使用回退方案:', error.message);
 
           // 显示回退界面
           container.innerHTML = '<div class="qrcode-fallback">' +
@@ -2577,12 +2665,12 @@
           // 显示成功反馈
           var originalText = copyBtn.textContent;
           copyBtn.textContent = '✅ 已复制';
-          copyBtn.classList.add('copied');
+          addClass(copyBtn, 'copied');
 
           // 3秒后恢复
           setTimeout(function() {
             copyBtn.textContent = originalText;
-            copyBtn.classList.remove('copied');
+            addClass(copyBtn, 'copied')
           }, 3000);
 
           showExportFeedback('✅ 链接已复制到剪贴板', 'success');
@@ -2612,8 +2700,6 @@
           var jsonStr = decodeURIComponent(atob(shareData));
           var data = JSON.parse(jsonStr);
 
-          console.log('从URL加载分享数据:', data);
-
           // 这里可以添加逻辑来显示分享的数据
           // 例如：显示"这是来自分享的检测结果"
           return data;
@@ -2631,75 +2717,75 @@
       // 重新检测按钮
       var recheckBtn = document.getElementById('recheck-btn');
       if (recheckBtn) {
-        recheckBtn.onclick = function() {
+        addEvent(recheckBtn, 'click', function() {
           self.runDetection();
-        };
+        });
       }
 
       // JSON 导出按钮
       var exportJsonBtn = document.getElementById('export-json-btn');
       if (exportJsonBtn) {
-        exportJsonBtn.onclick = function() {
+        addEvent(exportJsonBtn, 'click', function() {
           if (self.results && self.results.detectionTime) {
             self.exportAsJSON();
           } else {
-            showExportFeedback('❌ 请先完成检测', 'error');
+            // 显示错误提示（稍后实现）
+            alert('请先完成检测');
           }
-        };
+        });
       }
 
       // HTML 导出按钮
       var exportHtmlBtn = document.getElementById('export-html-btn');
       if (exportHtmlBtn) {
-        exportHtmlBtn.onclick = function() {
+        addEvent(exportHtmlBtn, 'click', function() {
           if (self.results && self.results.detectionTime) {
             self.exportAsHTML();
           } else {
-            showExportFeedback('❌ 请先完成检测', 'error');
+            alert('请先完成检测');
           }
-        };
+        });
       }
 
       // 分享按钮
       var shareBtn = document.getElementById('share-btn');
       if (shareBtn) {
-        shareBtn.onclick = function() {
+        addEvent(shareBtn, 'click', function() {
           self.openShareModal();
-        };
+        });
       }
 
       // 复制链接按钮
       var copyLinkBtn = document.getElementById('copy-link-btn');
       if (copyLinkBtn) {
-        copyLinkBtn.onclick = function() {
+        addEvent(copyLinkBtn, 'click', function() {
           self.copyShareLink();
-        };
+        });
       }
 
       // 关闭模态框按钮
       var closeModalBtn = document.getElementById('close-share-modal');
       if (closeModalBtn) {
-        closeModalBtn.onclick = function() {
+        addEvent(closeModalBtn, 'click', function() {
           self.closeShareModal();
-        };
+        });
       }
 
       // 点击模态框外部关闭
       var modal = document.getElementById('share-modal');
       if (modal) {
-        modal.onclick = function(event) {
+        addEvent(modal, 'click', function(event) {
           if (event.target === modal) {
             self.closeShareModal();
           }
-        };
+        });
       }
-
+      /*
       // 页面加载时检查是否有分享链接
       window.onload = function() {
         var sharedData = self.parseShareFromUrl();
         if (sharedData) {
           // 可以在这里显示分享的数据
-          console.log('检测到分享链接，数据:', sharedData);
           // 可以添加一个提示，比如："正在查看分享的检测结果"
         }
 
@@ -2713,6 +2799,7 @@
           document.getElementById('result').style.display = 'block';
         }
       };
+      */
     },
   };
 
