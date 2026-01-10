@@ -26,6 +26,7 @@
 </head>
 <body>
 <div class="container">
+  <div id="test"></div>
   <h1>🔍 Vue3 兼容性检测工具</h1>
   <p id="subtitle" class="subtitle">正在分析您的浏览器环境...</p>
 
@@ -127,6 +128,7 @@
 
   // 页面加载完成后开始检测
   domReady(function() {
+    document.getElementById('test').innerHTML = '页面加载完成';
     // 先检查分享链接（如果有）
     if (window.Vue3Detector && window.Vue3Detector.parseShareFromUrl) {
       var sharedData = window.Vue3Detector.parseShareFromUrl();
@@ -138,14 +140,13 @@
 
     // 执行检测
     if (window.Vue3Detector && window.Vue3Detector.runDetection) {
-      alert(3)
       window.Vue3Detector.runDetection();
     } else {
       // 显示错误
       var resultEl = document.getElementById('result');
       var loadingEl = document.getElementById('loading');
       var subtitleEl = document.getElementById('subtitle');
-alert(4);
+
       if (resultEl) {
         resultEl.innerHTML = '<div style="color: red; padding: 20px; text-align: center;">' +
           '<h3>❌ 检测脚本加载失败</h3>' +
