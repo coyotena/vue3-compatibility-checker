@@ -89,75 +89,134 @@
 
 <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
 <!-- 引入检测脚本 -->
-<script src="detect.js"></script>
+<!--<script src="detect.js"></script>-->
 <script>
 
+</script>
+<script>
   function domReady(callback) {
-    // 如果文档已经加载完成，立即执行
-    if (document.readyState === 'complete' ||
-      document.readyState === 'interactive') {
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
       setTimeout(callback, 1);
       return;
     }
-
-    // 现代浏览器：使用 DOMContentLoaded
     if (document.addEventListener) {
-      document.addEventListener('DOMContentLoaded', function loaded() {
-        document.removeEventListener('DOMContentLoaded', loaded, false);
-        callback();
-      }, false);
-    }
-    // IE8 及以下：使用 onreadystatechange
-    else if (document.attachEvent) {
-      document.attachEvent('onreadystatechange', function loaded() {
-        if (document.readyState === 'complete') {
-          document.detachEvent('onreadystatechange', loaded);
-          callback();
-        }
+      document.addEventListener('DOMContentLoaded', callback);
+    } else if (document.attachEvent) {
+      document.attachEvent('onreadystatechange', function() {
+        if (document.readyState === 'complete') callback();
       });
-    }
-    // 非常老的浏览器：使用 window.onload
-    else {
-      var oldOnload = window.onload;
-      window.onload = function() {
-        oldOnload && oldOnload();
-        callback();
-      };
+    } else {
+      window.onload = callback;
     }
   }
 
-  // 页面加载完成后开始检测
   domReady(function() {
+    var scriptUrl = 'detect.js'; // 你的JS文件路径
+    var maxRetries = 2;
+    var retryCount = 0;
+
     document.getElementById('test').innerHTML = window.Vue3Detector;
-    // 先检查分享链接（如果有）
-    if (window.Vue3Detector && window.Vue3Detector.parseShareFromUrl) {
-      var sharedData = window.Vue3Detector.parseShareFromUrl();
-      if (sharedData) {
-        console.log('检测到分享链接');
-        // 可以在这里显示分享的数据
-      }
+    function loadAndRunScript() {
+      // 方法1: 尝试用XMLHttpRequest以文本形式加载，以便捕获网络和解析错误
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', scriptUrl + '?t=' + new Date().getTime(), true); // 加时间戳避免缓存
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            // 加载成功，尝试作为代码执行
+            try {
+              // 🔥 关键：使用eval执行加载到的代码文本
+              eval(xhr.responseText);
+              console.log('脚本通过XHR加载并执行成功');
+
+              // 检查是否成功创建了全局对象
+              if (window.Vue3Detector && window.Vue3Detector.runDetection) {
+                window.Vue3Detector.runDetection();
+              } else {
+                showError('脚本执行后未创建Vue3Detector对象');
+              }
+            } catch (e) {
+              console.error('执行脚本内容时出错:', e);
+              showError('脚本执行错误: ' + e.message, true);
+            }
+          } else {
+            // 加载失败
+            console.error('加载脚本文件失败，状态码:', xhr.status);
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log('第' + retryCount + '次重试...');
+              setTimeout(loadAndRunScript, 1000 * retryCount);
+            } else {
+              showError('无法加载检测脚本（' + xhr.status + '）', true);
+            }
+          }
+        }
+      };
+      xhr.onerror = function() {
+        console.error('XHR网络错误');
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(loadAndRunScript, 1000 * retryCount);
+        } else {
+          showError('网络错误，无法加载脚本', true);
+        }
+      };
+      xhr.send();
     }
 
-    // 执行检测
-    if (window.Vue3Detector && window.Vue3Detector.runDetection) {
-      window.Vue3Detector.runDetection();
-    } else {
-      // 显示错误
+    function showError(message, isFatal) {
       var resultEl = document.getElementById('result');
       var loadingEl = document.getElementById('loading');
       var subtitleEl = document.getElementById('subtitle');
 
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (subtitleEl) subtitleEl.textContent = '检测失败';
+
       if (resultEl) {
-        resultEl.innerHTML = '<div style="color: red; padding: 20px; text-align: center;">' +
-          '<h3>❌ 检测脚本加载失败</h3>' +
-          '<p>请刷新页面重试，或检查浏览器兼容性。</p>' +
-          '<button onclick="location.reload()">刷新页面</button>' +
+        var ua = navigator.userAgent;
+        var isIE = ua.indexOf('MSIE') > -1 || ua.indexOf('Trident/') > -1;
+        var ieVersion = '未知';
+        if (ua.indexOf('MSIE 10') > -1) ieVersion = '10';
+        else if (ua.indexOf('MSIE 9') > -1) ieVersion = '9';
+        else if (ua.indexOf('MSIE 8') > -1) ieVersion = '8';
+        else if (ua.indexOf('Trident/7') > -1) ieVersion = '11';
+
+        var errorHtml = '<div style="padding:25px; text-align:center;">' +
+          '<h3 style="color:#721c24;">❌ 兼容性检测失败</h3>' +
+          '<p><strong>原因:</strong> ' + message + '</p>' +
+          '<div style="background:#f8f9fa; padding:15px; margin:15px 0; border-radius:5px; text-align:left; font-family:monospace; font-size:12px;">' +
+          '<strong>浏览器信息:</strong><br>' +
+          'User Agent: ' + ua + '<br>' +
+          '是否为IE: ' + (isIE ? '是' : '否') + '<br>' +
+          'IE版本: ' + (isIE ? ieVersion : '不适用') +
           '</div>';
+
+        // 如果是致命错误且是IE，显示专用建议
+        if (isFatal && isIE) {
+          errorHtml +=
+            '<div style="background:#fff3cd; border-left:4px solid #ffc107; padding:15px; margin:15px 0; text-align:left;">' +
+            '<h4 style="margin-top:0;">💡 对于IE用户的特别说明</h4>' +
+            '<p>您的浏览器 (Internet Explorer ' + ieVersion + ') <strong>无法运行此检测工具</strong>，因为：</p>' +
+            '<ul>' +
+            '<li>IE不支持Vue3所需的现代JavaScript特性</li>' +
+            '<li>本检测工具本身也使用了IE无法解析的语法</li>' +
+            '</ul>' +
+            '<p>这是预期结果，证明了IE确实不兼容Vue3。</p>' +
+            '<p><strong>建议:</strong> 请使用 <a href="https://www.google.com/chrome/" target="_blank">Chrome</a>、<a href="https://www.mozilla.org/firefox/" target="_blank">Firefox</a> 或 <a href="https://www.microsoft.com/edge" target="_blank">Edge</a> 等现代浏览器。</p>' +
+            '</div>';
+        }
+
+        errorHtml +=
+          '<button onclick="location.reload()" style="padding:10px 20px; margin:5px; background:#007bff; color:white; border:none; border-radius:4px;">刷新页面</button>' +
+          '</div>';
+
+        resultEl.innerHTML = errorHtml;
         resultEl.style.display = 'block';
       }
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (subtitleEl) subtitleEl.style.display = 'none';
     }
+
+    // 开始加载
+    setTimeout(loadAndRunScript, 100);
   });
 </script>
 </body>
