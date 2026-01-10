@@ -2,7 +2,7 @@
 // Vue3 兼容性检测器 - 降级版（ES5语法）
 // 版本：v1.1 - 增强浏览器信息解析
 // ==============================================
-
+try {
 ;(function () {
 
   var DataManager = {
@@ -3148,3 +3148,42 @@
   window.Vue3Detector = Vue3Detector;
 
 })();
+} catch (initError) {
+  // 如果初始化失败，提供一个最简化的降级版本
+  console.error('Vue3Detector 主逻辑初始化失败:', initError);
+
+  window.Vue3Detector = {
+    runDetection: function() {
+      var resultEl = document.getElementById('result');
+      var loadingEl = document.getElementById('loading');
+      var subtitleEl = document.getElementById('subtitle');
+
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (subtitleEl) subtitleEl.textContent = '初始化失败';
+
+      if (resultEl) {
+        var isIE = navigator.userAgent.indexOf('MSIE') > -1 ||
+          navigator.userAgent.indexOf('Trident/') > -1;
+        var ieHint = isIE ? '<p>检测到您正在使用旧版Internet Explorer浏览器，该浏览器无法运行Vue3。</p>' : '';
+
+        resultEl.innerHTML =
+          '<div style="padding: 30px; text-align: center; background: #f8d7da; color: #721c24; border-radius: 5px;">' +
+          '<h3>❌ 兼容性检测器启动失败</h3>' +
+          '<p><strong>原因:</strong> ' + (initError.message || '未知错误') + '</p>' +
+          ieHint +
+          '<p>建议使用 Chrome、Edge、Firefox 等现代浏览器。</p>' +
+          '<button onclick="location.reload()" style="padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px;">刷新页面</button>' +
+          '</div>';
+        resultEl.style.display = 'block';
+      }
+    },
+    // 提供一个方法让外部知道初始化失败了
+    initFailed: true,
+    initError: initError
+  };
+}
+window.Vue3Detector = window.Vue3Detector || {
+  runDetection: function() {
+    alert('检测脚本完全加载失败，请刷新页面。');
+  }
+};
