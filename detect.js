@@ -984,6 +984,7 @@ try {
     },
     // ================ 主入口 ================
     runDetection: function () {
+      alert(1);
       // 记录检测时间
       DataManager.set('detectionTime', new Date().toLocaleString());
 
