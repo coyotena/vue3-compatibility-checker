@@ -128,7 +128,7 @@
 
   // 页面加载完成后开始检测
   domReady(function() {
-    document.getElementById('test').innerHTML = '页面加载完成';
+    document.getElementById('test').innerHTML = window.Vue3Detector;
     // 先检查分享链接（如果有）
     if (window.Vue3Detector && window.Vue3Detector.parseShareFromUrl) {
       var sharedData = window.Vue3Detector.parseShareFromUrl();
