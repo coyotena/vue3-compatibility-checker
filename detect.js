@@ -3150,6 +3150,7 @@ try {
 
 })();
 } catch (initError) {
+  alert(2)
   // 如果初始化失败，提供一个最简化的降级版本
   console.error('Vue3Detector 主逻辑初始化失败:', initError);
 
