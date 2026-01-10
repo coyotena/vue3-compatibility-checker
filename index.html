@@ -1,18 +1,162 @@
-<!-- 在容器内直接替换所有内容 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <!-- 使用 UTF-8 编码 -->
+  <meta charset="UTF-8">
+  <!-- 兼容 IE 的模式声明 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue3 兼容性检测</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* 临时内联一些关键样式，确保CSS文件加载失败时也有基本样式 */
+    body {
+      font-family: "Microsoft YaHei", Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
 <div class="container">
   <h1>🔍 Vue3 兼容性检测工具</h1>
-  <div id="loading" style="display:none;">检测中...</div>
+  <p id="subtitle" class="subtitle">正在分析您的浏览器环境...</p>
 
-  <div id="result">
-    <h2>⚠️ IE浏览器检测</h2>
-    <p>检测到您正在使用 Internet Explorer。</p>
-    <p>IE浏览器不支持Vue3，也无法运行本检测工具。</p>
-    <p>建议使用 Chrome、Edge、Firefox 等现代浏览器。</p>
-    <hr>
-    <p>当前User Agent:<br>
-      <code><script>document.write(navigator.userAgent)</script></code></p>
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>检测中，请稍候...</p>
+  </div>
+
+  <div id="result" style="display:none;">
+    <!-- 结果会动态填充到这里 -->
+  </div>
+
+  <div class="actions">
+    <button id="recheck-btn" class="btn">重新检测</button>
+    <div class="export-dropdown">
+      <button id="export-btn" class="btn">导出结果 ↓</button>
+      <div class="export-options">
+        <button id="export-json-btn" class="export-option">导出为 JSON</button>
+        <button id="export-html-btn" class="export-option">导出为 HTML 报告</button>
+      </div>
+    </div>
+    <button id="share-btn" class="btn">分享结果</button>
+  </div>
+
+  <div class="footer">
+    <p>此页面用于检测您的浏览器是否支持运行 Vue3 开发的网页应用</p>
+  </div>
+</div>
+<div id="share-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>📤 分享检测结果</h3>
+      <button id="close-share-modal" class="close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="share-option">
+        <h4>🔗 分享链接</h4>
+        <div class="share-link-container">
+          <input type="text" id="share-link-input" readonly class="share-link-input">
+          <button id="copy-link-btn" class="copy-btn">复制</button>
+        </div>
+        <p class="help-text">将此链接发送给他人，他们可以看到您的检测结果</p>
+      </div>
+
+      <div class="share-option">
+        <h4>📱 二维码</h4>
+        <div id="qrcode-container" class="qrcode-container">
+          <p>正在生成二维码...</p>
+        </div>
+        <p class="help-text">使用手机扫描查看结果</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <p class="disclaimer">
+        <small>⚠️ 注意：分享链接包含您的浏览器环境信息，不包含个人隐私数据。</small>
+      </p>
+    </div>
   </div>
 </div>
 
-<!-- 删除所有script标签，只保留这个显示UA的 -->
-<script>document.write('<style>#result{display:block !important;}</style>')</script>
+<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
+<!-- 引入检测脚本 -->
+<script src="detect.js"></script>
+<script>
+
+  function domReady(callback) {
+    // 如果文档已经加载完成，立即执行
+    if (document.readyState === 'complete' ||
+      document.readyState === 'interactive') {
+      setTimeout(callback, 1);
+      return;
+    }
+
+    // 现代浏览器：使用 DOMContentLoaded
+    if (document.addEventListener) {
+      document.addEventListener('DOMContentLoaded', function loaded() {
+        document.removeEventListener('DOMContentLoaded', loaded, false);
+        callback();
+      }, false);
+    }
+    // IE8 及以下：使用 onreadystatechange
+    else if (document.attachEvent) {
+      document.attachEvent('onreadystatechange', function loaded() {
+        if (document.readyState === 'complete') {
+          document.detachEvent('onreadystatechange', loaded);
+          callback();
+        }
+      });
+    }
+    // 非常老的浏览器：使用 window.onload
+    else {
+      var oldOnload = window.onload;
+      window.onload = function() {
+        oldOnload && oldOnload();
+        callback();
+      };
+    }
+  }
+
+  // 页面加载完成后开始检测
+  domReady(function() {
+    // 先检查分享链接（如果有）
+    if (window.Vue3Detector && window.Vue3Detector.parseShareFromUrl) {
+      var sharedData = window.Vue3Detector.parseShareFromUrl();
+      if (sharedData) {
+        console.log('检测到分享链接');
+        // 可以在这里显示分享的数据
+      }
+    }
+
+    // 执行检测
+    if (window.Vue3Detector && window.Vue3Detector.runDetection) {
+      window.Vue3Detector.runDetection();
+    } else {
+      // 显示错误
+      var resultEl = document.getElementById('result');
+      var loadingEl = document.getElementById('loading');
+      var subtitleEl = document.getElementById('subtitle');
+
+      if (resultEl) {
+        resultEl.innerHTML = '<div style="color: red; padding: 20px; text-align: center;">' +
+          '<h3>❌ 检测脚本加载失败</h3>' +
+          '<p>请刷新页面重试，或检查浏览器兼容性。</p>' +
+          '<button onclick="location.reload()">刷新页面</button>' +
+          '</div>';
+        resultEl.style.display = 'block';
+      }
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (subtitleEl) subtitleEl.style.display = 'none';
+    }
+  });
+</script>
+</body>
+</html>

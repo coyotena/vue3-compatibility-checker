@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>测试2: AJAX加载</title>
+</head>
+<body>
+<h1>测试2: AJAX加载测试</h1>
+<div id="status">加载中...</div>
+<script>
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'detect.js', true);
+  xhr.onload = function() {
+    document.getElementById('status').textContent =
+      'AJAX成功! 文件大小: ' + xhr.responseText.length + ' 字符';
+  };
+  xhr.onerror = function() {
+    document.getElementById('status').textContent = 'AJAX失败!';
+  };
+  xhr.send();
+</script>
+</body>
+</html>
