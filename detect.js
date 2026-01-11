@@ -492,7 +492,7 @@
 
   // 2. 兼容的 addClass 函数
   function addClass(element, className) {
-    if (!element) return;
+    if (!element || !className) return;
 
     if (hasClassList) {
       element.classList.add(className);
@@ -612,26 +612,41 @@
   // 1. 修复 Array.prototype 方法（ES5 polyfill）
   if (!Array.prototype.forEach) {
     Array.prototype.forEach = function(callback, thisArg) {
-      var T, k;
+      // 安全第一：如果this无效，直接返回
       if (this == null) {
-        throw new TypeError(' this is null or not defined');
+        return;
       }
-      var O = Object(this);
-      var len = O.length >>> 0;
-      if (typeof callback !== "function") {
-        throw new TypeError(callback + ' is not a function');
+
+      var O = this;
+      var len = O.length;
+
+      // 处理非数字长度
+      if (typeof len !== 'number') {
+        return;
       }
-      if (arguments.length > 1) {
-        T = thisArg;
+
+      len = len >>> 0; // 转换为无符号整数
+
+      // 检查回调
+      if (typeof callback !== 'function') {
+        return;
       }
-      k = 0;
-      while (k < len) {
-        var kValue;
-        if (k in O) {
-          kValue = O[k];
-          callback.call(T, kValue, k, O);
+
+      // 执行循环
+      var i = 0;
+      while (i < len) {
+        if (i in O) {
+          try {
+            if (thisArg !== undefined) {
+              callback.call(thisArg, O[i], i, O);
+            } else {
+              callback(O[i], i, O);
+            }
+          } catch (e) {
+            // 忽略回调错误，继续执行
+          }
         }
-        k++;
+        i++;
       }
     };
   }
@@ -2260,7 +2275,7 @@
 
       html += '<tr><td>User Agent</td>';
       html += '<td class="mono" title="' + this.escapeHtml(results.browser.userAgent) + '">';
-      if (results.browser.userAgent.length > 50) {
+      if (results.browser.userAgent && results.browser.userAgent.length > 50) {
         html += results.browser.userAgent.substring(0, 50) + '...';
       } else {
         html += results.browser.userAgent;
@@ -2283,7 +2298,7 @@
 
       html += '<tr><td>内存</td><td>' + this.formatHardwareValue(results.hardware.memory) + '</td><td>💾</td></tr>';
 
-      html += '<tr><td>屏幕分辨率</td><td>' + results.hardware.screen.width + '×' + results.hardware.screen.height + '</td><td>🖥️</td></tr>';
+      html += '<tr><td>屏幕分辨率</td><td>' + window.screen.width + '×' + window.screen.height + '</td><td>🖥️</td></tr>';
 
       html += '<tr><td>GPU/WebGL</td>';
       html += '<td>WebGL支持</td><td>';
@@ -2378,7 +2393,7 @@
 
       // 4. 环境信息汇总
       html += this.buildEnvironmentInfoTable();
-      
+
       // 5. 优化建议
       html += '<div class="suggestions-section">';
       html += '<h3>💡 优化建议</h3>';
