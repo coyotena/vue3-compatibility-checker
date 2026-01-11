@@ -1,6 +1,6 @@
 // ==============================================
-// Vue3 兼容性检测器 - 强化IE兼容版
-// 版本：v1.3 - 全面增强IE兼容性
+// Vue3 兼容性检测器 - 完整特性显示版
+// 版本：v1.4 - 所有浏览器显示完整检查项
 // ==============================================
 
 ;(function () {
@@ -117,7 +117,6 @@
     if (!window.console) {
       window.console = {
         log: function() {
-          // 安全输出日志
           try {
             var args = Array.prototype.slice.call(arguments);
             var msg = args.join(' ');
@@ -152,7 +151,7 @@
   }
 
   // ==============================================
-  // 3. 安全特性检测函数（兼容所有IE版本）
+  // 3. 安全特性检测函数
   // ==============================================
 
   function safeTestFeature(code) {
@@ -162,17 +161,7 @@
       var result = window._ieSafeTry ? window._ieSafeTry(function() {
         // IE6-7: 避免使用new Function，直接返回false
         if (IE_VERSION <= 7) {
-          // IE6-7 绝对不支持这些特性
-          if (code.indexOf('Proxy') > -1) return false;
-          if (code.indexOf('Reflect') > -1) return false;
-          if (code.indexOf('Symbol') > -1) return false;
-          if (code.indexOf('async') > -1) return false;
-          if (code.indexOf('=>') > -1) return false;
-          if (code.indexOf('`') > -1) return false;
-          if (code.indexOf('let') > -1) return false;
-          if (code.indexOf('const') > -1) return false;
-          if (code.indexOf('class') > -1) return false;
-          return false; // 默认返回false
+          return false;
         }
 
         // IE8: 可以尝试使用Function，但要更安全
@@ -273,7 +262,6 @@
     if (text === null || text === undefined) return '';
 
     var str = String(text);
-    // 简单转义
     return str
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -283,7 +271,7 @@
   }
 
   // ==============================================
-  // 5. 原有代码从这里开始（保持结构，添加兼容性）
+  // 5. 原有代码从这里开始
   // ==============================================
 
   var DataManager = {
@@ -325,7 +313,7 @@
       current[parts[parts.length - 1]] = value;
     },
 
-    // ================ 统一WebGL检测（关键！） ================
+    // ================ 统一WebGL检测 ================
     getWebGLInfo: function() {
       if (this._webglCache !== null) {
         return this._webglCache;
@@ -743,12 +731,11 @@
       return DataManager.getState();
     },
 
-    // ================ 导出为 JSON 格式（IE安全版） ================
+    // ================ 导出为 JSON 格式 ================
     exportAsJSON: function() {
       try {
-        // 准备导出数据 - 简化版，避免IE JSON.stringify问题
+        // 准备导出数据
         var exportData = {
-          // 元数据
           meta: {
             tool: 'Vue3 Compatibility Detector',
             version: '2.0',
@@ -757,7 +744,6 @@
             userAgent: navigator.userAgent
           },
 
-          // 检测结果 - 关键信息
           detection: {
             time: this.results.detectionTime,
             compatibility: {
@@ -772,16 +758,15 @@
             os: {
               name: this.results.os.name,
               version: this.results.os.version
-            }
+            },
+            features: this.results.features
           },
 
-          // Vue3 兼容性要求
           vue3Requirements: {
             browsers: VUE3_REQUIREMENTS.browsers,
             coreFeatures: ['Proxy', 'Reflect', 'Promise', 'Symbol', 'Map', 'Set']
           },
 
-          // 检测到的核心问题
           issues: this.results.compatibility.issues || []
         };
 
@@ -790,7 +775,6 @@
         try {
           jsonString = JSON.stringify(exportData, null, 2);
         } catch (e) {
-          // 如果JSON.stringify失败，使用更简单的结构
           jsonString = JSON.stringify({
             meta: exportData.meta,
             compatibility: exportData.detection.compatibility,
@@ -817,7 +801,7 @@
       }
     },
 
-    // ================ 导出为 HTML 报告（IE安全版） ================
+    // ================ 导出为 HTML 报告 ================
     exportAsHTML: function() {
       try {
         var results = this.results;
@@ -829,77 +813,8 @@
         else if (results.compatibility.level === 'partial') statusIcon = '⚠️';
         else if (results.compatibility.level === 'incompatible') statusIcon = '❌';
 
-        // 生成问题列表 HTML
-        var issuesHTML = '';
-        if (results.compatibility.detailedIssues) {
-          var detailed = results.compatibility.detailedIssues;
-
-          if (detailed.critical && detailed.critical.length > 0) {
-            issuesHTML += '<h4>❌ 严重问题</h4><ul>';
-            for (var i = 0; i < detailed.critical.length; i++) {
-              issuesHTML += '<li>' + this.escapeHtml(detailed.critical[i].message) + '</li>';
-            }
-            issuesHTML += '</ul>';
-          }
-
-          if (detailed.warning && detailed.warning.length > 0) {
-            issuesHTML += '<h4>⚠️ 建议优化</h4><ul>';
-            for (var j = 0; j < detailed.warning.length; j++) {
-              issuesHTML += '<li>' + this.escapeHtml(detailed.warning[j].message) + '</li>';
-            }
-            issuesHTML += '</ul>';
-          }
-        }
-
-        // 生成建议 HTML
-        var suggestionsHTML = '';
-        for (var s = 0; s < suggestions.length; s++) {
-          var suggestion = suggestions[s];
-          var actionsText = '';
-
-          if (suggestion.actions && suggestion.actions.length > 0) {
-            var actionTexts = [];
-            for (var a = 0; a < suggestion.actions.length; a++) {
-              actionTexts.push(suggestion.actions[a].text);
-            }
-            actionsText = '<p><small>建议操作: ' + actionTexts.join(', ') + '</small></p>';
-          }
-
-          suggestionsHTML += '<div class="suggestion-card ' + suggestion.type + '">' +
-            '<h3>' + this.escapeHtml(suggestion.title) + '</h3>' +
-            '<p><strong>' + this.escapeHtml(suggestion.description) + '</strong></p>' +
-            '<p>' + this.escapeHtml(suggestion.details) + '</p>' +
-            actionsText +
-            '</div>';
-        }
-
-        // ===== 生成特性支持表格 =====
-        var featuresTablesHTML = '';
-
-        // 1. Vue3 核心特性表格
-        featuresTablesHTML += '<h3>Vue3 核心依赖特性</h3>';
-        featuresTablesHTML += '<table>';
-        featuresTablesHTML += '<tr><th>特性</th><th>支持情况</th><th>重要性</th></tr>';
-
-        var coreFeatures = [
-          { key: 'proxy', name: 'Proxy API', required: true },
-          { key: 'reflect', name: 'Reflect API', required: true },
-          { key: 'promise', name: 'Promise', required: true },
-          { key: 'symbol', name: 'Symbol', required: true },
-          { key: 'map', name: 'Map', required: true },
-          { key: 'set', name: 'Set', required: true }
-        ];
-
-        for (var cf = 0; cf < coreFeatures.length; cf++) {
-          var coreFeature = coreFeatures[cf];
-          var coreSupported = results.features.es6[coreFeature.key];
-          featuresTablesHTML += '<tr>';
-          featuresTablesHTML += '<td>' + coreFeature.name + '</td>';
-          featuresTablesHTML += '<td>' + (coreSupported ? '✅ 支持' : '❌ 不支持') + '</td>';
-          featuresTablesHTML += '<td>' + (coreFeature.required ? '<span class="required">必需</span>' : '推荐') + '</td>';
-          featuresTablesHTML += '</tr>';
-        }
-        featuresTablesHTML += '</table>';
+        // 生成特性支持表格
+        var featuresTablesHTML = this.buildFullFeaturesTablesHTML();
 
         // ===== 完整的 HTML 报告 =====
         var htmlContent = '<!DOCTYPE html>\n' +
@@ -964,64 +879,41 @@
           '            border-bottom: 1px solid #eee;\n' +
           '        }\n' +
           '        \n' +
-          '        .section h3 {\n' +
-          '            color: #555;\n' +
-          '            margin: 25px 0 15px 0;\n' +
-          '            font-size: 18px;\n' +
-          '        }\n' +
-          '        \n' +
-          '        table {\n' +
+          '        .feature-table {\n' +
           '            width: 100%;\n' +
           '            border-collapse: collapse;\n' +
           '            margin: 15px 0;\n' +
           '            font-size: 14px;\n' +
           '        }\n' +
           '        \n' +
-          '        th, td {\n' +
+          '        .feature-table th, .feature-table td {\n' +
           '            border: 1px solid #ddd;\n' +
           '            padding: 12px;\n' +
           '            text-align: left;\n' +
           '        }\n' +
           '        \n' +
-          '        th {\n' +
+          '        .feature-table th {\n' +
           '            background-color: #f5f5f5;\n' +
           '            font-weight: bold;\n' +
           '            color: #555;\n' +
           '        }\n' +
           '        \n' +
-          '        tr:nth-child(even) {\n' +
+          '        .feature-table td.supported {\n' +
+          '            color: #4caf50;\n' +
+          '            font-weight: bold;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .feature-table td.not-supported {\n' +
+          '            color: #f44336;\n' +
+          '            font-weight: bold;\n' +
+          '        }\n' +
+          '        \n' +
+          '        .feature-table tr:nth-child(even) {\n' +
           '            background-color: #f9f9f9;\n' +
           '        }\n' +
           '        \n' +
-          '        tr:hover {\n' +
+          '        .feature-table tr:hover {\n' +
           '            background-color: #f1f1f1;\n' +
-          '        }\n' +
-          '        \n' +
-          '        .suggestion-card {\n' +
-          '            border-left: 4px solid;\n' +
-          '            padding: 15px;\n' +
-          '            margin: 10px 0;\n' +
-          '            background-color: #f8f9fa;\n' +
-          '        }\n' +
-          '        \n' +
-          '        .critical { border-color: #f44336; }\n' +
-          '        .warning { border-color: #ff9800; }\n' +
-          '        .info { border-color: #2196f3; }\n' +
-          '        .success { border-color: #4caf50; }\n' +
-          '        \n' +
-          '        .footer {\n' +
-          '            text-align: center;\n' +
-          '            margin-top: 40px;\n' +
-          '            padding-top: 20px;\n' +
-          '            border-top: 1px solid #eee;\n' +
-          '            color: #666;\n' +
-          '            font-size: 14px;\n' +
-          '        }\n' +
-          '        \n' +
-          '        .timestamp {\n' +
-          '            color: #888;\n' +
-          '            font-size: 14px;\n' +
-          '            margin: 5px 0;\n' +
           '        }\n' +
           '        \n' +
           '        .required {\n' +
@@ -1033,29 +925,28 @@
           '            font-weight: bold;\n' +
           '        }\n' +
           '        \n' +
-          '        small {\n' +
-          '            color: #666;\n' +
+          '        .recommended {\n' +
+          '            background-color: #fff3e0;\n' +
+          '            color: #ef6c00;\n' +
+          '            padding: 3px 8px;\n' +
+          '            border-radius: 4px;\n' +
           '            font-size: 12px;\n' +
           '        }\n' +
           '        \n' +
-          '        @media print {\n' +
-          '            body {\n' +
-          '                background: white;\n' +
-          '                padding: 0;\n' +
-          '            }\n' +
-          '            \n' +
-          '            .section {\n' +
-          '                box-shadow: none;\n' +
-          '                border: 1px solid #ddd;\n' +
-          '                page-break-inside: avoid;\n' +
-          '            }\n' +
+          '        .footer {\n' +
+          '            text-align: center;\n' +
+          '            margin-top: 40px;\n' +
+          '            padding-top: 20px;\n' +
+          '            border-top: 1px solid #eee;\n' +
+          '            color: #666;\n' +
+          '            font-size: 14px;\n' +
           '        }\n' +
           '    </style>\n' +
           '</head>\n' +
           '<body>\n' +
           '    <div class="header">\n' +
           '        <h1>' + statusIcon + ' Vue3 兼容性检测报告</h1>\n' +
-          '        <p class="timestamp">生成时间: ' + new Date().toLocaleString() + '</p>\n' +
+          '        <p>生成时间: ' + new Date().toLocaleString() + '</p>\n' +
           '        <div class="compatibility-badge ' + results.compatibility.level + '">\n' +
           '            ' + results.compatibility.description.toUpperCase() + '\n' +
           '        </div>\n' +
@@ -1063,7 +954,7 @@
           '    \n' +
           '    <div class="section">\n' +
           '        <h2>📊 检测摘要</h2>\n' +
-          '        <table>\n' +
+          '        <table class="feature-table">\n' +
           '            <tr>\n' +
           '                <th width="120">检测时间</th>\n' +
           '                <td>' + this.escapeHtml(results.detectionTime) + '</td>\n' +
@@ -1081,56 +972,14 @@
           '                <td><strong>' + this.escapeHtml(results.compatibility.description) + '</strong></td>\n' +
           '            </tr>\n' +
           '        </table>\n' +
-          '    </div>\n';
-
-        // 添加问题部分（如果有）
-        if (issuesHTML) {
-          htmlContent += '    <div class="section">\n' +
-            '        <h2>⚠️ 检测到的问题</h2>\n' +
-            '        ' + issuesHTML + '\n' +
-            '    </div>\n';
-        }
-
-        // 添加特性支持部分
-        htmlContent += '    <div class="section">\n' +
-          '        <h2>⚙️ 特性支持详情</h2>\n' +
-          '        ' + featuresTablesHTML + '\n' +
-          '    </div>\n';
-
-        // 添加建议部分
-        if (suggestionsHTML) {
-          htmlContent += '    <div class="section">\n' +
-            '        <h2>💡 优化建议</h2>\n' +
-            '        ' + suggestionsHTML + '\n' +
-            '    </div>\n';
-        }
-
-        // 添加 Vue3 要求部分
-        htmlContent += '    <div class="section">\n' +
-          '        <h2>📋 Vue3 兼容性要求</h2>\n' +
-          '        <table>\n' +
-          '            <tr>\n' +
-          '                <th>浏览器</th>\n' +
-          '                <th>最低要求版本</th>\n' +
-          '            </tr>\n' +
-          '            <tr><td>Chrome</td><td>≥ 64</td></tr>\n' +
-          '            <tr><td>Firefox</td><td>≥ 59</td></tr>\n' +
-          '            <tr><td>Safari</td><td>≥ 11</td></tr>\n' +
-          '            <tr><td>Edge</td><td>≥ 79</td></tr>\n' +
-          '            <tr><td>Opera</td><td>≥ 51</td></tr>\n' +
-          '        </table>\n' +
-          '        <p style="margin-top: 15px; color: #666;">\n' +
-          '            <small>以上要求基于 Vue3 官方文档。IE 浏览器不支持 Vue3。</small>\n' +
-          '        </p>\n' +
           '    </div>\n' +
-          '    \n' +
+
+          featuresTablesHTML +
+
           '    <div class="footer">\n' +
           '        <p>此报告由 Vue3 兼容性检测工具生成</p>\n' +
           '        <p>检测工具地址: ' + this.escapeHtml(window.location.href) + '</p>\n' +
           '        <p>生成时间: ' + new Date().toLocaleString() + '</p>\n' +
-          '        <p style="margin-top: 10px; color: #999;">\n' +
-          '            <small>报告仅供参考，具体兼容性以实际测试为准</small>\n' +
-          '        </p>\n' +
           '    </div>\n' +
           '</body>\n' +
           '</html>';
@@ -1200,7 +1049,7 @@
         var features = this.detectFeatureSupport();
         DataManager.set('features', features);
 
-        // 5. 🔥 关键：同步WebGL数据
+        // 5. 同步WebGL数据
         DataManager.syncWebGLData();
 
       } catch (error) {
@@ -1236,7 +1085,7 @@
         isEdgeLegacy: false,
       };
 
-      // ===== 1. 检测浏览器类型和版本 =====
+      // ===== 检测浏览器类型和版本 =====
 
       // IE 11
       if (ua.indexOf('Trident') > -1 && ua.indexOf('rv:') > -1) {
@@ -1301,7 +1150,7 @@
         if (match) browser.version = parseFloat(match[1]);
       }
 
-      // ===== 2. 检测渲染引擎 =====
+      // ===== 检测渲染引擎 =====
       if (ua.indexOf('AppleWebKit') > -1) {
         browser.engine = 'WebKit';
         var match = ua.match(/AppleWebKit\/(\d+\.?\d*)/);
@@ -1320,7 +1169,7 @@
         browser.engine = 'Blink';
       }
 
-      // ===== 3. 检测JS引擎信息 =====
+      // ===== 检测JS引擎信息 =====
       browser.jsEngine = {
         supportsES6: this.testES6Support(),
         supportsES2016: this.testES2016Support(),
@@ -1345,7 +1194,7 @@
         detectionConfidence: 'low'
       };
 
-      // ===== 1. 检测操作系统类型和版本 =====
+      // ===== 检测操作系统类型和版本 =====
 
       // Windows
       if (platform.indexOf('Win') > -1 || ua.indexOf('windows') > -1) {
@@ -1376,7 +1225,6 @@
       // Linux
       else if (platform.indexOf('Linux') > -1 || ua.indexOf('linux') > -1) {
         os.name = 'Linux';
-        // 尝试检测具体发行版
         if (ua.indexOf('ubuntu') > -1) os.version = 'Ubuntu';
         else if (ua.indexOf('fedora') > -1) os.version = 'Fedora';
         else if (ua.indexOf('centos') > -1) os.version = 'CentOS';
@@ -1396,7 +1244,7 @@
         os.detectionConfidence = 'high';
       }
 
-      // ===== 2. 系统位数检测（简化版） =====
+      // ===== 系统位数检测 =====
       if (ua.indexOf('win64') > -1 || ua.indexOf('x64') > -1 ||
         ua.indexOf('amd64') > -1 || ua.indexOf('wow64') > -1) {
         os.bits = '64-bit';
@@ -1466,7 +1314,7 @@
       return hardware;
     },
 
-    // ================ 特性支持检测 ================
+    // ================ 特性支持检测（显示所有项） ================
     detectFeatureSupport: function() {
       var features = {
         es6: {},
@@ -1478,63 +1326,67 @@
       };
 
       // ===== ES6 核心特性 =====
+      // 所有特性都检查，IE低版本结果都是false
+
       features.es6 = {
         // Vue3 绝对必需
-        proxy: typeof Proxy !== 'undefined',
-        reflect: typeof Reflect !== 'undefined',
-        promise: typeof Promise !== 'undefined',
-        symbol: typeof Symbol !== 'undefined',
-        map: typeof Map !== 'undefined',
-        set: typeof Set !== 'undefined',
+        proxy: !IS_IE_LOW && typeof Proxy !== 'undefined',
+        reflect: !IS_IE_LOW && typeof Reflect !== 'undefined',
+        promise: !IS_IE_LOW && typeof Promise !== 'undefined',
+        symbol: !IS_IE_LOW && typeof Symbol !== 'undefined',
+        map: !IS_IE_LOW && typeof Map !== 'undefined',
+        set: !IS_IE_LOW && typeof Set !== 'undefined',
 
         // Vue3 内部优化使用
-        weakMap: typeof WeakMap !== 'undefined',
-        weakSet: typeof WeakSet !== 'undefined',
+        weakMap: !IS_IE_LOW && typeof WeakMap !== 'undefined',
+        weakSet: !IS_IE_LOW && typeof WeakSet !== 'undefined',
 
         // Vue3 常用工具依赖
-        objectAssign: typeof Object.assign === 'function',
-        arrayIncludes: 'includes' in Array.prototype,
-        stringIncludes: 'includes' in String.prototype,
-        arrayFrom: typeof Array.from === 'function',
-        asyncAwait: this.testAsyncAwaitSupport(),
+        objectAssign: !IS_IE_LOW && typeof Object.assign === 'function',
+        arrayIncludes: !IS_IE_LOW && 'includes' in Array.prototype,
+        stringIncludes: !IS_IE_LOW && 'includes' in String.prototype,
+        arrayFrom: !IS_IE_LOW && typeof Array.from === 'function',
+        asyncAwait: !IS_IE_LOW && this.testAsyncAwaitSupport(),
 
         // 对象方法
         objectKeys: typeof Object.keys === 'function',
-        objectEntries: typeof Object.entries === 'function',
-        objectValues: typeof Object.values === 'function',
-        objectFromEntries: typeof Object.fromEntries === 'function',
+        objectEntries: !IS_IE_LOW && typeof Object.entries === 'function',
+        objectValues: !IS_IE_LOW && typeof Object.values === 'function',
+        objectFromEntries: !IS_IE_LOW && typeof Object.fromEntries === 'function',
 
         // 语法支持
-        arrowFunctions: this.testArrowFunctions(),
-        templateLiterals: this.testTemplateLiterals(),
-        letConst: this.testLetConst(),
-        classes: this.testClassSupport(),
-        defaultParams: this.testDefaultParameters(),
-        restParams: this.testRestParameters(),
-        spread: this.testSpreadOperator(),
-        destructuring: this.testDestructuring(),
-        forOf: this.testForOfSupport()
+        arrowFunctions: !IS_IE_LOW && this.testArrowFunctions(),
+        templateLiterals: !IS_IE_LOW && this.testTemplateLiterals(),
+        letConst: !IS_IE_LOW && this.testLetConst(),
+        classes: !IS_IE_LOW && this.testClassSupport(),
+        defaultParams: !IS_IE_LOW && this.testDefaultParameters(),
+        restParams: !IS_IE_LOW && this.testRestParameters(),
+        spread: !IS_IE_LOW && this.testSpreadOperator(),
+        destructuring: !IS_IE_LOW && this.testDestructuring(),
+        forOf: !IS_IE_LOW && this.testForOfSupport()
       };
 
       // ===== ES2016+ 特性 =====
       features.es2016 = {
-        arrayPrototypeIncludes: 'includes' in Array.prototype,
-        exponentiationOperator: this.testExponentiationOperator()
+        arrayPrototypeIncludes: !IS_IE_LOW && 'includes' in Array.prototype,
+        exponentiationOperator: !IS_IE_LOW && this.testExponentiationOperator()
       };
 
       features.es2017 = {
-        objectEntries: typeof Object.entries === 'function',
-        objectValues: typeof Object.values === 'function',
-        stringPadding: 'padStart' in String.prototype && 'padEnd' in String.prototype
+        objectEntries: !IS_IE_LOW && typeof Object.entries === 'function',
+        objectValues: !IS_IE_LOW && typeof Object.values === 'function',
+        stringPadding: !IS_IE_LOW && 'padStart' in String.prototype && 'padEnd' in String.prototype,
+        asyncAwait: !IS_IE_LOW && this.testAsyncAwaitSupport()
       };
 
       features.es2018 = {
-        objectSpread: this.testObjectSpread(),
-        promiseFinally: 'finally' in Promise.prototype,
-        asyncIteration: this.testAsyncIteration()
+        objectSpread: !IS_IE_LOW && this.testObjectSpread(),
+        promiseFinally: !IS_IE_LOW && 'finally' in Promise.prototype,
+        asyncIteration: !IS_IE_LOW && this.testAsyncIteration()
       };
 
       // ===== CSS 特性 =====
+      // CSS特性正常检测，因为IE可能部分支持
       features.css = {
         flexbox: this.testCSSFeature('display', 'flex'),
         grid: this.testCSSFeature('display', 'grid'),
@@ -1552,22 +1404,22 @@
       features.webAPIs = {
         webgl: webglInfo.supported,
         webglVersion: webglInfo.version,
-        serviceWorker: 'serviceWorker' in navigator,
+        serviceWorker: !IS_IE_LOW && 'serviceWorker' in navigator,
         localStorage: 'localStorage' in window,
         sessionStorage: 'sessionStorage' in window,
-        indexDB: 'indexedDB' in window,
-        fetch: 'fetch' in window,
+        indexDB: !IS_IE_LOW && 'indexedDB' in window,
+        fetch: !IS_IE_LOW && 'fetch' in window,
         geolocation: 'geolocation' in navigator,
-        webWorkers: 'Worker' in window,
-        webSockets: 'WebSocket' in window,
-        intersectionObserver: 'IntersectionObserver' in window,
-        mutationObserver: 'MutationObserver' in window,
+        webWorkers: !IS_IE_LOW && 'Worker' in window,
+        webSockets: !IS_IE_LOW && 'WebSocket' in window,
+        intersectionObserver: !IS_IE_LOW && 'IntersectionObserver' in window,
+        mutationObserver: !IS_IE_LOW && 'MutationObserver' in window,
         performance: 'performance' in window,
-        performanceObserver: 'PerformanceObserver' in window,
-        navigatorShare: 'share' in navigator,
-        clipboard: 'clipboard' in navigator,
-        es6Modules: 'noModule' in HTMLScriptElement.prototype,
-        dynamicImport: this.testDynamicImport()
+        performanceObserver: !IS_IE_LOW && 'PerformanceObserver' in window,
+        navigatorShare: !IS_IE_LOW && 'share' in navigator,
+        clipboard: !IS_IE_LOW && 'clipboard' in navigator,
+        es6Modules: !IS_IE_LOW && 'noModule' in HTMLScriptElement.prototype,
+        dynamicImport: !IS_IE_LOW && this.testDynamicImport()
       };
 
       // 兼容性修复
@@ -1580,13 +1432,10 @@
       return features;
     },
 
-    // ================ 测试辅助函数（IE安全版） ================
+    // ================ 测试辅助函数 ================
 
     testES6Support: function () {
-      if (IS_IE_LOW) {
-        // IE低版本肯定不支持ES6
-        return false;
-      }
+      if (IS_IE_LOW) return false;
 
       try {
         var fn = new Function('var x = 1; return true;');
@@ -1739,7 +1588,6 @@
       if (IS_IE_LOW) return false;
 
       try {
-        // 更安全的检测方式
         var fn = new Function('return Promise && Promise.resolve && true');
         return fn() === true;
       } catch (e) {
@@ -2033,15 +1881,163 @@
 
       subtitleEl.textContent = texts[level] || '检测完成';
 
-      // 移除旧的状态类
       removeClass(subtitleEl, 'compatible');
       removeClass(subtitleEl, 'partial');
       removeClass(subtitleEl, 'incompatible');
-      // 添加新的状态类
       addClass(subtitleEl, level);
     },
 
-    // ================ 显示完整结果（简化版，兼容IE低版本） ================
+    // ================ 构建完整的特性支持表格HTML ================
+    buildFullFeaturesTablesHTML: function() {
+      var results = this.results;
+      var html = '<div class="section">\n' +
+        '<h2>⚙️ 特性支持详情</h2>\n';
+
+      // 1. Vue3 核心特性表格
+      html += '<div style="margin-bottom: 30px;">\n';
+      html += '<h3>Vue3 核心依赖特性</h3>\n';
+      html += '<table class="feature-table">\n';
+      html += '<thead><tr><th>特性</th><th>支持情况</th><th>重要性</th><th>说明</th></tr></thead>\n';
+      html += '<tbody>\n';
+
+      var coreFeatures = [
+        { key: 'proxy', name: 'Proxy API', required: true, desc: 'Vue3 响应式系统核心' },
+        { key: 'reflect', name: 'Reflect API', required: true, desc: 'Vue3 响应式系统辅助' },
+        { key: 'promise', name: 'Promise', required: true, desc: '异步操作处理' },
+        { key: 'symbol', name: 'Symbol', required: true, desc: '唯一标识符，Vue内部使用' },
+        { key: 'map', name: 'Map', required: true, desc: '键值对集合' },
+        { key: 'set', name: 'Set', required: true, desc: '值集合' },
+        { key: 'weakMap', name: 'WeakMap', required: false, desc: '弱引用键值对' },
+        { key: 'weakSet', name: 'WeakSet', required: false, desc: '弱引用值集合' }
+      ];
+
+      for (var i = 0; i < coreFeatures.length; i++) {
+        var feature = coreFeatures[i];
+        var supported = results.features.es6[feature.key];
+        html += '<tr>\n';
+        html += '<td><strong>' + feature.name + '</strong></td>\n';
+        html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">\n';
+        html += supported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>\n';
+        html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '<span class="recommended">推荐</span>') + '</td>\n';
+        html += '<td><small>' + feature.desc + '</small></td>\n';
+        html += '</tr>\n';
+      }
+      html += '</tbody></table>\n';
+      html += '</div>\n';
+
+      // 2. ES6+ 语法特性表格
+      html += '<div style="margin-bottom: 30px;">\n';
+      html += '<h3>ES6+ 语法特性</h3>\n';
+      html += '<table class="feature-table">\n';
+      html += '<thead><tr><th>特性</th><th>支持情况</th><th>用途</th></tr></thead>\n';
+      html += '<tbody>\n';
+
+      var syntaxFeatures = [
+        { key: 'arrowFunctions', name: '箭头函数', desc: '简洁的函数语法，this绑定' },
+        { key: 'templateLiterals', name: '模板字符串', desc: '字符串插值和多行字符串' },
+        { key: 'letConst', name: 'let/const', desc: '块级作用域变量声明' },
+        { key: 'classes', name: 'Class', desc: '类语法糖' },
+        { key: 'defaultParams', name: '默认参数', desc: '函数参数默认值' },
+        { key: 'restParams', name: '剩余参数', desc: '...args 参数收集' },
+        { key: 'spread', name: '扩展运算符', desc: '... 展开语法' },
+        { key: 'destructuring', name: '解构赋值', desc: '对象/数组解构' },
+        { key: 'forOf', name: 'for...of', desc: '可迭代对象遍历' },
+        { key: 'asyncAwait', name: 'async/await', desc: '异步编程语法糖' }
+      ];
+
+      for (var j = 0; j < syntaxFeatures.length; j++) {
+        var syntaxFeature = syntaxFeatures[j];
+        var syntaxSupported = results.features.es6[syntaxFeature.key];
+
+        html += '<tr>\n';
+        html += '<td>' + syntaxFeature.name + '</td>\n';
+        html += '<td class="' + (syntaxSupported ? 'supported' : 'not-supported') + '">\n';
+        html += syntaxSupported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>\n';
+        html += '<td><small>' + syntaxFeature.desc + '</small></td>\n';
+        html += '</tr>\n';
+      }
+      html += '</tbody></table>\n';
+      html += '</div>\n';
+
+      // 3. Web APIs 表格
+      html += '<div style="margin-bottom: 30px;">\n';
+      html += '<h3>Web API 支持</h3>\n';
+      html += '<table class="feature-table">\n';
+      html += '<thead><tr><th>API</th><th>支持情况</th><th>用途</th></tr></thead>\n';
+      html += '<tbody>\n';
+
+      var webAPIs = [
+        { key: 'fetch', name: 'Fetch API', desc: '网络请求，替代 XMLHttpRequest' },
+        { key: 'localStorage', name: 'localStorage', desc: '本地持久化存储' },
+        { key: 'sessionStorage', name: 'sessionStorage', desc: '会话存储' },
+        { key: 'webgl', name: 'WebGL', desc: '3D图形渲染' },
+        { key: 'webWorkers', name: 'Web Workers', desc: '多线程处理' },
+        { key: 'webSockets', name: 'WebSocket', desc: '全双工通信' },
+        { key: 'geolocation', name: 'Geolocation', desc: '地理位置获取' },
+        { key: 'serviceWorker', name: 'Service Worker', desc: '离线应用、推送' },
+        { key: 'indexDB', name: 'IndexedDB', desc: '客户端数据库' }
+      ];
+
+      for (var k = 0; k < webAPIs.length; k++) {
+        var api = webAPIs[k];
+        var apiSupported = results.features.webAPIs[api.key];
+        var apiDetails = '';
+
+        if (api.key === 'webgl' && apiSupported) {
+          apiDetails = '版本: ' + this.escapeHtml(results.features.webAPIs.webglVersion || 'Unknown');
+        }
+
+        html += '<tr>\n';
+        html += '<td>' + api.name + '</td>\n';
+        html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">\n';
+        html += apiSupported ? '✅ 支持' : '❌ 不支持';
+        if (apiDetails) html += '<br><small>' + apiDetails + '</small>';
+        html += '</td>\n';
+        html += '<td><small>' + api.desc + '</small></td>\n';
+        html += '</tr>\n';
+      }
+      html += '</tbody></table>\n';
+      html += '</div>\n';
+
+      // 4. CSS 特性表格
+      html += '<div>\n';
+      html += '<h3>CSS 特性支持</h3>\n';
+      html += '<table class="feature-table">\n';
+      html += '<thead><tr><th>特性</th><th>支持情况</th><th>用途</th></tr></thead>\n';
+      html += '<tbody>\n';
+
+      var cssFeatures = [
+        { key: 'flexbox', name: 'Flexbox', desc: '弹性布局' },
+        { key: 'grid', name: 'CSS Grid', desc: '网格布局' },
+        { key: 'cssVariables', name: 'CSS 变量', desc: '自定义属性、主题' },
+        { key: 'transform', name: 'Transform', desc: '元素变换' },
+        { key: 'transition', name: 'Transition', desc: '过渡动画' },
+        { key: 'animation', name: 'Animation', desc: '关键帧动画' },
+        { key: 'calc', name: 'calc()', desc: '动态计算值' },
+        { key: 'filter', name: 'Filter', desc: '滤镜效果' }
+      ];
+
+      for (var l = 0; l < cssFeatures.length; l++) {
+        var cssFeature = cssFeatures[l];
+        var cssSupported = results.features.css[cssFeature.key];
+        html += '<tr>\n';
+        html += '<td>' + cssFeature.name + '</td>\n';
+        html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">\n';
+        html += cssSupported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>\n';
+        html += '<td><small>' + cssFeature.desc + '</small></td>\n';
+        html += '</tr>\n';
+      }
+      html += '</tbody></table>\n';
+      html += '</div>\n';
+
+      html += '</div>\n';
+      return html;
+    },
+
+    // ================ 显示完整结果 ================
     displayResults: function () {
       // 更新副标题
       this.updateSubtitle();
@@ -2055,19 +2051,17 @@
       html += '<h2>检测结果: ' + results.compatibility.description + '</h2>';
       html += '<p>检测时间: ' + results.detectionTime + '</p>';
 
-      // IE低版本特殊提示
       if (IS_IE_LOW) {
         html += '<p><strong style="color: #f44336;">⚠️ 注意：Internet Explorer ' + IE_VERSION + ' 不支持 Vue3</strong></p>';
       }
 
       html += '</div>';
 
-      // 2. 环境信息汇总表格（简化版，避免IE表格渲染问题）
+      // 2. 环境信息汇总表格
       html += '<div class="info-section">';
       html += '<h3>📊 环境信息汇总</h3>';
-      html += '<table class="info-table" border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">';
-      html += '<thead><tr><th>类别</th><th>项目</th><th>检测值</th><th>状态</th></tr></thead>';
-      html += '<tbody>';
+      html += '<table class="info-table">';
+      html += '<tr><th>类别</th><th>项目</th><th>检测值</th><th>状态</th></tr>';
 
       // 浏览器信息
       html += '<tr><td rowspan="4">浏览器</td>';
@@ -2078,6 +2072,15 @@
       html += '<td>' + this.getVersionStatus(results.browser) + '</td></tr>';
 
       html += '<tr><td>渲染引擎</td><td>' + results.browser.engine + '</td><td>✅</td></tr>';
+
+      html += '<tr><td>User Agent</td>';
+      html += '<td class="mono" title="' + this.escapeHtml(results.browser.userAgent) + '">';
+      if (results.browser.userAgent.length > 50) {
+        html += results.browser.userAgent.substring(0, 50) + '...';
+      } else {
+        html += results.browser.userAgent;
+      }
+      html += '</td><td>📝</td></tr>';
 
       // 操作系统
       html += '<tr><td rowspan="3">操作系统</td>';
@@ -2090,15 +2093,35 @@
       html += '<td>' + (results.os.bits !== '无法确定' ? '✅' : '❓') + '</td></tr>';
 
       // 硬件信息
-      html += '<tr><td rowspan="2">硬件</td>';
+      html += '<tr><td rowspan="3">硬件</td>';
       html += '<td>CPU 核心</td><td>' + this.formatHardwareValue(results.hardware.cpuCores) + '</td><td>⚙️</td></tr>';
 
       html += '<tr><td>内存</td><td>' + this.formatHardwareValue(results.hardware.memory) + '</td><td>💾</td></tr>';
 
-      html += '</tbody></table>';
+      html += '<tr><td>屏幕分辨率</td><td>' + results.hardware.screen.width + '×' + results.hardware.screen.height + '</td><td>🖥️</td></tr>';
+
+      html += '<tr><td>GPU/WebGL</td>';
+      html += '<td>WebGL支持</td><td>';
+
+      if (results.hardware.gpu && results.hardware.gpu.webgl !== undefined) {
+        if (results.hardware.gpu.webgl) {
+          html += '✅ 支持 (' + this.escapeHtml(results.hardware.gpu.webglVersion) + ')';
+        } else {
+          html += '❌ 不支持';
+        }
+      } else {
+        html += '检测失败';
+      }
+
+      html += '</td><td>' + (results.hardware.gpu && results.hardware.gpu.webgl ? '✅' : '❌') + '</td></tr>';
+
+      html += '</table>';
       html += '</div>';
 
-      // 3. 问题明细（如果有）
+      // 3. 特性支持详情 - 所有浏览器都显示完整表格
+      html += this.buildFullFeaturesTablesHTML();
+
+      // 4. 问题明细（如果有）
       if (results.compatibility.detailedIssues) {
         var detailed = results.compatibility.detailedIssues;
         var hasAnyIssues = detailed.critical.length > 0 ||
@@ -2145,29 +2168,30 @@
         }
       }
 
-      // 4. 优化建议（简化版）
+      // 5. 优化建议
       html += '<div class="suggestions-section">';
       html += '<h3>💡 优化建议</h3>';
 
       if (suggestions.length > 0) {
-        // 只显示前2个建议，避免IE渲染问题
-        var maxSuggestions = IS_IE_LOW ? Math.min(2, suggestions.length) : suggestions.length;
-
-        for (var i = 0; i < maxSuggestions; i++) {
+        for (var i = 0; i < suggestions.length; i++) {
           var suggestion = suggestions[i];
-          html += '<div class="suggestion-card ' + suggestion.type + '" style="margin-bottom: 15px; padding: 15px; border-left: 4px solid; background: #f8f9fa;">';
-          html += '<h4 style="margin-top: 0;">' + suggestion.title + '</h4>';
-          html += '<p><strong>' + suggestion.description + '</strong></p>';
-          html += '<p>' + suggestion.details + '</p>';
+          html += '<div class="suggestion-card ' + suggestion.type + '">';
+          html += '<div class="suggestion-header">';
+          html += '<span class="suggestion-category">' + suggestion.category + '</span>';
+          html += '<span class="suggestion-type ' + suggestion.type + '">' + this.getSuggestionTypeText(suggestion.type) + '</span>';
+          html += '</div>';
+          html += '<h4>' + suggestion.title + '</h4>';
+          html += '<p class="suggestion-desc">' + suggestion.description + '</p>';
+          html += '<p class="suggestion-details">' + suggestion.details + '</p>';
 
           if (suggestion.actions && suggestion.actions.length > 0) {
-            html += '<div style="margin-top: 10px;">';
+            html += '<div class="suggestion-actions">';
             for (var j = 0; j < suggestion.actions.length; j++) {
               var action = suggestion.actions[j];
               if (action.url === '#') {
-                html += '<button class="action-btn" style="padding: 8px 16px; background: #42b883; color: white; border: none; border-radius: 4px; margin-right: 10px; cursor: pointer;">' + action.text + '</button>';
+                html += '<button class="action-btn">' + action.text + '</button>';
               } else {
-                html += '<a href="' + action.url + '" target="_blank" style="padding: 8px 16px; background: #42b883; color: white; border: none; border-radius: 4px; margin-right: 10px; text-decoration: none; display: inline-block;">' + action.text + '</a>';
+                html += '<a href="' + action.url + '" target="_blank" class="action-btn">' + action.text + '</a>';
               }
             }
             html += '</div>';
@@ -2177,10 +2201,10 @@
       }
       html += '</div>';
 
-      // 5. 底部操作说明（简化版）
-      html += '<div class="footer-notes" style="background: white; padding: 20px; border-radius: 8px; margin-top: 20px;">';
+      // 6. 底部操作说明
+      html += '<div class="footer-notes">';
       html += '<p><strong>说明：</strong></p>';
-      html += '<ul style="padding-left: 20px;">';
+      html += '<ul>';
       html += '<li>✅ 完全支持 | ⚠️ 部分支持/可能有问题 | ❌ 不支持</li>';
       html += '<li>以上检测基于 Vue3 官方兼容标准</li>';
 
@@ -2244,7 +2268,6 @@
       // ===== 1. 根据兼容性等级生成主建议 =====
 
       if (compatibility.level === 'incompatible') {
-        // 不兼容：显示核心问题解决方案
         if (detailedIssues.critical && detailedIssues.critical.length > 0) {
           var mainCritical = detailedIssues.critical[0];
 
@@ -2259,7 +2282,6 @@
         }
       }
       else if (compatibility.level === 'partial') {
-        // 部分兼容：显示优化建议
         var hasWarningIssues = detailedIssues.warning && detailedIssues.warning.length > 0;
         var hasOnlyInfoIssues = !hasWarningIssues && detailedIssues.info && detailedIssues.info.length > 0;
 
@@ -2294,7 +2316,6 @@
         }
       }
       else if (compatibility.level === 'compatible') {
-        // 完全兼容
         suggestions.push({
           type: 'success',
           category: 'compatibility',
@@ -2433,7 +2454,7 @@
       return actions;
     },
 
-    // ================ 分享功能（IE低版本禁用） ================
+    // ================ 分享功能 ================
     openShareModal: function() {
       if (IS_IE_LOW) {
         alert('分享功能在 Internet Explorer ' + IE_VERSION + ' 中不可用。\n\n请使用现代浏览器访问此页面。');
@@ -2447,10 +2468,8 @@
 
       var shareData = this.generateShareData();
 
-      // 更新模态框内容
       document.getElementById('share-link-input').value = shareData.url;
 
-      // 尝试生成二维码
       try {
         this.generateQRCode(shareData.url);
       } catch (error) {
@@ -2464,12 +2483,10 @@
           '</div>';
       }
 
-      // 显示模态框
       document.getElementById('share-modal').style.display = 'flex';
     },
 
     generateShareData: function() {
-      // 只分享关键信息
       var shareData = {
         v: '2.0',
         t: Date.now().toString(36),
@@ -2660,24 +2677,17 @@
   // IE低版本加载完成后的特殊处理
   if (IS_IE_LOW) {
     domReady(function() {
-      // 在IE中显示特殊提示
       var subtitle = document.getElementById('subtitle');
       if (subtitle) {
         subtitle.innerHTML = '🔍 正在检测 Internet Explorer ' + IE_VERSION + ' 兼容性...<br>' +
-          '<small style="color: #666;">注意：IE 不支持 Vue3，但我们会显示详细的不兼容信息</small>';
+          '<small style="color: #666;">注意：IE 不支持 Vue3，但我们会显示详细的特性检查结果</small>';
       }
 
-      // 简化UI，移除复杂功能
       var shareBtn = document.getElementById('share-btn');
       if (shareBtn) {
         shareBtn.style.display = 'none';
       }
-
-      // 添加IE特殊样式
-      var style = document.createElement('style');
-      style.textContent = '.ie-special-note { background: #fff3e0; border: 1px solid #ff9800; padding: 15px; margin: 15px 0; border-radius: 5px; }';
-      document.head.appendChild(style);
     });
   }
 
-})(); // 结束自执行函数
+})();
