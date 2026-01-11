@@ -2036,29 +2036,214 @@
       html += '</div>\n';
       return html;
     },
-
-    // ================ 显示完整结果 ================
-    displayResults: function () {
-      // 更新副标题
-      this.updateSubtitle();
-
+// ================ 构建特性支持表格（带折叠功能） ================
+    buildFullFeaturesTables: function() {
       var results = this.results;
-      var suggestions = this.generateSuggestions();
-      var html = '';
+      var html = '<div class="features-section collapsible-section">';
+      html += '<h3>⚙️ 特性支持详情 <small style="color:#666; font-weight:normal;">(点击展开/折叠)</small></h3>';
 
-      // 1. 顶部状态卡片
-      html += '<div class="status-card ' + results.compatibility.level + '">';
-      html += '<h2>检测结果: ' + results.compatibility.description + '</h2>';
-      html += '<p>检测时间: ' + results.detectionTime + '</p>';
-
-      if (IS_IE_LOW) {
-        html += '<p><strong style="color: #f44336;">⚠️ 注意：Internet Explorer ' + IE_VERSION + ' 不支持 Vue3</strong></p>';
-      }
-
+      // 1. Vue3核心特性面板（默认展开）
+      html += '<div class="collapsible-panel expanded" id="core-features-panel">';
+      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'core-features\')">';
+      html += '<h4><span class="arrow">▼</span> Vue3 核心依赖特性</h4>';
+      html += '</div>';
+      html += '<div class="panel-content" id="core-features-content">';
+      html += this.buildCoreFeaturesTable();
+      html += '</div>';
       html += '</div>';
 
-      // 2. 环境信息汇总表格
-      html += '<div class="info-section">';
+      // 2. 重要ES6+特性面板（默认折叠）
+      html += '<div class="collapsible-panel" id="important-features-panel">';
+      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'important-features\')">';
+      html += '<h4><span class="arrow">▶</span> 重要 ES6+ 特性</h4>';
+      html += '</div>';
+      html += '<div class="panel-content" id="important-features-content" style="display:none;">';
+      html += this.buildImportantFeaturesTable();
+      html += '</div>';
+      html += '</div>';
+
+      // 3. Web API支持面板（默认折叠）
+      html += '<div class="collapsible-panel" id="webapi-features-panel">';
+      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'webapi-features\')">';
+      html += '<h4><span class="arrow">▶</span> Web API 支持</h4>';
+      html += '</div>';
+      html += '<div class="panel-content" id="webapi-features-content" style="display:none;">';
+      html += this.buildWebAPIsTable();
+      html += '</div>';
+      html += '</div>';
+
+      // 4. CSS特性支持面板（默认折叠）
+      html += '<div class="collapsible-panel" id="css-features-panel">';
+      html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'css-features\')">';
+      html += '<h4><span class="arrow">▶</span> CSS 特性支持</h4>';
+      html += '</div>';
+      html += '<div class="panel-content" id="css-features-content" style="display:none;">';
+      html += this.buildCSSFeaturesTable();
+      html += '</div>';
+      html += '</div>';
+
+      html += '</div>';
+      return html;
+    },
+
+// ================ 新增：面板切换函数 ================
+    togglePanel: function(panelType) {
+      var panel = document.getElementById(panelType + '-panel');
+      var content = document.getElementById(panelType + '-content');
+      var arrow = panel.querySelector('.arrow');
+
+      if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        arrow.textContent = '▼';
+        addClass(panel, 'expanded');
+      } else {
+        content.style.display = 'none';
+        arrow.textContent = '▶';
+        removeClass(panel, 'expanded');
+      }
+    },
+
+// ================ 新增：构建各个表格的函数 ================
+    buildCoreFeaturesTable: function() {
+      var features = this.results.features.es6;
+      var html = '<table class="feature-table">';
+      html += '<tr><th>特性</th><th>支持情况</th><th>重要性</th><th>说明</th></tr>';
+
+      var coreFeatures = [
+        { key: 'proxy', name: 'Proxy API', required: true, desc: 'Vue3 响应式系统核心' },
+        { key: 'reflect', name: 'Reflect API', required: true, desc: 'Vue3 响应式系统辅助' },
+        { key: 'promise', name: 'Promise', required: true, desc: '异步操作处理' },
+        { key: 'symbol', name: 'Symbol', required: true, desc: '唯一标识符，Vue内部使用' },
+        { key: 'map', name: 'Map', required: true, desc: '键值对集合' },
+        { key: 'set', name: 'Set', required: true, desc: '值集合' },
+        { key: 'weakMap', name: 'WeakMap', required: false, desc: '弱引用键值对' },
+        { key: 'weakSet', name: 'WeakSet', required: false, desc: '弱引用值集合' }
+      ];
+
+      for (var i = 0; i < coreFeatures.length; i++) {
+        var feature = coreFeatures[i];
+        var supported = features[feature.key];
+        html += '<tr>';
+        html += '<td><strong>' + feature.name + '</strong></td>';
+        html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
+        html += supported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>';
+        html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '<span class="recommended">推荐</span>') + '</td>';
+        html += '<td><small>' + feature.desc + '</small></td>';
+        html += '</tr>';
+      }
+      html += '</table>';
+      return html;
+    },
+
+    buildImportantFeaturesTable: function() {
+      var results = this.results;
+      var html = '<table class="feature-table">';
+      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
+
+      var importantFeatures = [
+        { key: 'asyncAwait', name: 'async/await', desc: '异步编程、组合式API' },
+        { key: 'arrowFunctions', name: '箭头函数', desc: '简洁函数语法，this绑定' },
+        { key: 'templateLiterals', name: '模板字符串', desc: '字符串插值和多行字符串' },
+        { key: 'letConst', name: 'let/const', desc: '块级作用域变量声明' },
+        { key: 'classes', name: 'Class', desc: '类语法糖' },
+        { key: 'defaultParams', name: '默认参数', desc: '函数参数默认值' },
+        { key: 'restParams', name: '剩余参数', desc: '...args 参数收集' },
+        { key: 'spread', name: '扩展运算符', desc: '... 展开语法' },
+        { key: 'destructuring', name: '解构赋值', desc: '对象/数组解构' },
+        { key: 'forOf', name: 'for...of', desc: '可迭代对象遍历' }
+      ];
+
+      for (var i = 0; i < importantFeatures.length; i++) {
+        var feature = importantFeatures[i];
+        var supported = results.features.es6[feature.key];
+
+        html += '<tr>';
+        html += '<td>' + feature.name + '</td>';
+        html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
+        html += supported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>';
+        html += '<td><small>' + feature.desc + '</small></td>';
+        html += '</tr>';
+      }
+      html += '</table>';
+      return html;
+    },
+
+    buildWebAPIsTable: function() {
+      var results = this.results;
+      var html = '<table class="feature-table">';
+      html += '<tr><th>API</th><th>支持情况</th><th>用途</th></tr>';
+
+      var webAPIs = [
+        { key: 'fetch', name: 'Fetch API', desc: '网络请求，替代 XMLHttpRequest' },
+        { key: 'localStorage', name: 'localStorage', desc: '本地持久化存储' },
+        { key: 'sessionStorage', name: 'sessionStorage', desc: '会话存储' },
+        { key: 'webgl', name: 'WebGL', desc: '3D图形渲染' },
+        { key: 'webWorkers', name: 'Web Workers', desc: '多线程处理' },
+        { key: 'webSockets', name: 'WebSocket', desc: '全双工通信' },
+        { key: 'geolocation', name: 'Geolocation', desc: '地理位置获取' },
+        { key: 'serviceWorker', name: 'Service Worker', desc: '离线应用、推送' },
+        { key: 'indexDB', name: 'IndexedDB', desc: '客户端数据库' }
+      ];
+
+      for (var i = 0; i < webAPIs.length; i++) {
+        var api = webAPIs[i];
+        var apiSupported = results.features.webAPIs[api.key];
+        var apiDetails = '';
+
+        if (api.key === 'webgl' && apiSupported) {
+          apiDetails = '版本: ' + this.escapeHtml(results.features.webAPIs.webglVersion || 'Unknown');
+        }
+
+        html += '<tr>';
+        html += '<td>' + api.name + '</td>';
+        html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">';
+        html += apiSupported ? '✅ 支持' : '❌ 不支持';
+        if (apiDetails) html += '<br><small>' + apiDetails + '</small>';
+        html += '</td>';
+        html += '<td><small>' + api.desc + '</small></td>';
+        html += '</tr>';
+      }
+      html += '</table>';
+      return html;
+    },
+
+    buildCSSFeaturesTable: function() {
+      var features = this.results.features.css;
+      var html = '<table class="feature-table">';
+      html += '<tr><th>特性</th><th>支持情况</th><th>用途</th></tr>';
+
+      var cssFeatures = [
+        { key: 'flexbox', name: 'Flexbox', desc: '弹性布局' },
+        { key: 'grid', name: 'CSS Grid', desc: '网格布局' },
+        { key: 'cssVariables', name: 'CSS 变量', desc: '自定义属性、主题' },
+        { key: 'transform', name: 'Transform', desc: '元素变换' },
+        { key: 'transition', name: 'Transition', desc: '过渡动画' },
+        { key: 'animation', name: 'Animation', desc: '关键帧动画' },
+        { key: 'calc', name: 'calc()', desc: '动态计算值' },
+        { key: 'filter', name: 'Filter', desc: '滤镜效果' }
+      ];
+
+      for (var i = 0; i < cssFeatures.length; i++) {
+        var cssFeature = cssFeatures[i];
+        var cssSupported = features[cssFeature.key];
+        html += '<tr>';
+        html += '<td>' + cssFeature.name + '</td>';
+        html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">';
+        html += cssSupported ? '✅ 支持' : '❌ 不支持';
+        html += '</td>';
+        html += '<td><small>' + cssFeature.desc + '</small></td>';
+        html += '</tr>';
+      }
+      html += '</table>';
+      return html;
+    },
+
+// ================ 构建环境信息汇总表格 ================
+    buildEnvironmentInfoTable: function() {
+      var results = this.results;
+      var html = '<div class="info-section" style="margin-top: 30px;">';
       html += '<h3>📊 环境信息汇总</h3>';
       html += '<table class="info-table">';
       html += '<tr><th>类别</th><th>项目</th><th>检测值</th><th>状态</th></tr>';
@@ -2118,10 +2303,33 @@
       html += '</table>';
       html += '</div>';
 
-      // 3. 特性支持详情 - 所有浏览器都显示完整表格
-      html += this.buildFullFeaturesTablesHTML();
+      return html;
+    },
 
-      // 4. 问题明细（如果有）
+// ================ 修改displayResults函数 ================
+    displayResults: function () {
+      // 更新副标题
+      this.updateSubtitle();
+
+      var results = this.results;
+      var suggestions = this.generateSuggestions();
+      var html = '';
+
+      // 1. 顶部状态卡片
+      html += '<div class="status-card ' + results.compatibility.level + '">';
+      html += '<h2>检测结果: ' + results.compatibility.description + '</h2>';
+      html += '<p>检测时间: ' + results.detectionTime + '</p>';
+
+      if (IS_IE_LOW) {
+        html += '<p><strong style="color: #f44336;">⚠️ 注意：Internet Explorer ' + IE_VERSION + ' 不支持 Vue3</strong></p>';
+      }
+
+      html += '</div>';
+
+      // 2. 特性支持详情 - 所有浏览器都显示完整表格（带折叠）
+      html += this.buildFullFeaturesTables();
+
+      // 3. 问题明细（如果有）
       if (results.compatibility.detailedIssues) {
         var detailed = results.compatibility.detailedIssues;
         var hasAnyIssues = detailed.critical.length > 0 ||
@@ -2168,6 +2376,9 @@
         }
       }
 
+      // 4. 环境信息汇总
+      html += this.buildEnvironmentInfoTable();
+      
       // 5. 优化建议
       html += '<div class="suggestions-section">';
       html += '<h3>💡 优化建议</h3>';
