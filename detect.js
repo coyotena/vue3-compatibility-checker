@@ -153,7 +153,36 @@
   // ==============================================
   // 3. 安全特性检测函数
   // ==============================================
+  function getIcon(type) {
 
+    if (!IS_IE_LOW) {
+      // 现代浏览器使用Unicode表情
+      var unicodeIcons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        gear: '⚙️',
+        clipboard: '📋',
+        bulb: '💡',
+        chart: '📊',
+        target: '🎯'
+      };
+      return unicodeIcons[type] || '';
+    } else {
+      // IE8及以下使用ASCII或CSS
+      var asciiIcons = {
+        success: '[OK]',
+        error: '[X]',
+        warning: '[!]',
+        gear: '[设置]',
+        clipboard: '[报告]',
+        bulb: '[建议]',
+        chart: '[图表]',
+        target: '[目标]'
+      };
+      return asciiIcons[type] || '';
+    }
+  }
   function safeTestFeature(code) {
     // IE低版本特殊处理
     if (IS_IE_LOW) {
@@ -238,7 +267,7 @@
       document.body.removeChild(textarea);
 
       if (copied) {
-        alert('✅ 内容已复制到剪贴板\n\n请打开记事本或其他文本编辑器，按Ctrl+V粘贴内容，然后保存为文件。\n建议文件名: ' + fileName);
+        alert(getIcon('success') + ' 内容已复制到剪贴板\n\n请打开记事本或其他文本编辑器，按Ctrl+V粘贴内容，然后保存为文件。\n建议文件名: ' + fileName);
         return true;
       } else {
         // 方法3：直接显示内容让用户手动复制
@@ -477,9 +506,9 @@
         textarea.select();
         try {
           document.execCommand('copy');
-          showExportFeedback('✅ 内容已复制到剪贴板，请手动保存', 'success');
+          showExportFeedback(getIcon('success') + ' 内容已复制到剪贴板，请手动保存', 'success');
         } catch (e) {
-          showExportFeedback('❌ 复制失败，请手动保存以下内容：\n' + content.substring(0, 500) + '...', 'error');
+          showExportFeedback(getIcon('error') + ' 复制失败，请手动保存以下内容：\n' + content.substring(0, 500) + '...', 'error');
         }
         document.body.removeChild(textarea);
       }
@@ -805,14 +834,14 @@
 
         // 下载文件
         if (downloadFile(jsonString, fileName, 'application/json')) {
-          showExportFeedback('✅ 结果已导出为 JSON 文件', 'success');
+          showExportFeedback(getIcon('success') + ' 结果已导出为 JSON 文件', 'success');
         } else {
-          showExportFeedback('❌ 导出失败，请重试', 'error');
+          showExportFeedback(getIcon('error') + ' 导出失败，请重试', 'error');
         }
 
       } catch (error) {
         console.error('导出 JSON 失败:', error);
-        showExportFeedback('❌ 导出出错: ' + error.message, 'error');
+        showExportFeedback(getIcon('error') + ' 导出出错: ' + error.message, 'error');
       }
     },
 
@@ -823,10 +852,10 @@
         var suggestions = this.generateSuggestions();
 
         // 生成状态图标
-        var statusIcon = '📊';
-        if (results.compatibility.level === 'compatible') statusIcon = '✅';
-        else if (results.compatibility.level === 'partial') statusIcon = '⚠️';
-        else if (results.compatibility.level === 'incompatible') statusIcon = '❌';
+        var statusIcon = getIcon('chart');
+        if (results.compatibility.level === 'compatible') statusIcon = getIcon('success');
+        else if (results.compatibility.level === 'partial') statusIcon = getIcon('warning');
+        else if (results.compatibility.level === 'incompatible') statusIcon = getIcon('error');
 
         // 生成特性支持表格
         var featuresTablesHTML = this.buildFullFeaturesTablesHTML();
@@ -968,7 +997,7 @@
           '    </div>\n' +
           '    \n' +
           '    <div class="section">\n' +
-          '        <h2>📊 检测摘要</h2>\n' +
+          '        <h2>'+ getIcon('chart') +' 检测摘要</h2>\n' +
           '        <table class="feature-table">\n' +
           '            <tr>\n' +
           '                <th width="120">检测时间</th>\n' +
@@ -1005,14 +1034,14 @@
 
         // 下载文件
         if (downloadFile(htmlContent, fileName, 'text/html')) {
-          showExportFeedback('✅ HTML 报告已生成并下载', 'success');
+          showExportFeedback(getIcon('success') + ' HTML 报告已生成并下载', 'success');
         } else {
-          showExportFeedback('❌ 导出失败，请重试', 'error');
+          showExportFeedback(getIcon('error') + ' 导出失败，请重试', 'error');
         }
 
       } catch (error) {
         console.error('导出 HTML 失败:', error);
-        showExportFeedback('❌ 导出出错: ' + error.message, 'error');
+        showExportFeedback(getIcon('error') + ' 导出出错: ' + error.message, 'error');
       }
     },
 
@@ -1889,9 +1918,9 @@
 
       var level = this.results.compatibility.level;
       var texts = {
-        'compatible': '✅ 检测完成：完全兼容 Vue3',
-        'partial': '⚠️ 检测完成：部分兼容 Vue3',
-        'incompatible': '❌ 检测完成：不兼容 Vue3'
+        'compatible': getIcon('success') + ' 检测完成：完全兼容 Vue3',
+        'partial': getIcon('warning') + ' 检测完成：部分兼容 Vue3',
+        'incompatible': getIcon('error') + ' 检测完成：不兼容 Vue3'
       };
 
       subtitleEl.textContent = texts[level] || '检测完成';
@@ -1906,7 +1935,7 @@
     buildFullFeaturesTablesHTML: function() {
       var results = this.results;
       var html = '<div class="section">\n' +
-        '<h2>⚙️ 特性支持详情</h2>\n';
+        '<h2>'+ getIcon('gear') + ' 特性支持详情</h2>\n';
 
       // 1. Vue3 核心特性表格
       html += '<div style="margin-bottom: 30px;">\n';
@@ -1932,7 +1961,7 @@
         html += '<tr>\n';
         html += '<td><strong>' + feature.name + '</strong></td>\n';
         html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">\n';
-        html += supported ? '✅ 支持' : '❌ 不支持';
+        html += supported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         html += '</td>\n';
         html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '<span class="recommended">推荐</span>') + '</td>\n';
         html += '<td><small>' + feature.desc + '</small></td>\n';
@@ -1968,7 +1997,7 @@
         html += '<tr>\n';
         html += '<td>' + syntaxFeature.name + '</td>\n';
         html += '<td class="' + (syntaxSupported ? 'supported' : 'not-supported') + '">\n';
-        html += syntaxSupported ? '✅ 支持' : '❌ 不支持';
+        html += syntaxSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         html += '</td>\n';
         html += '<td><small>' + syntaxFeature.desc + '</small></td>\n';
         html += '</tr>\n';
@@ -2007,7 +2036,7 @@
         html += '<tr>\n';
         html += '<td>' + api.name + '</td>\n';
         html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">\n';
-        html += apiSupported ? '✅ 支持' : '❌ 不支持';
+        html += apiSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         if (apiDetails) html += '<br><small>' + apiDetails + '</small>';
         html += '</td>\n';
         html += '<td><small>' + api.desc + '</small></td>\n';
@@ -2040,7 +2069,7 @@
         html += '<tr>\n';
         html += '<td>' + cssFeature.name + '</td>\n';
         html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">\n';
-        html += cssSupported ? '✅ 支持' : '❌ 不支持';
+        html += cssSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         html += '</td>\n';
         html += '<td><small>' + cssFeature.desc + '</small></td>\n';
         html += '</tr>\n';
@@ -2055,7 +2084,7 @@
     buildFullFeaturesTables: function() {
       var results = this.results;
       var html = '<div class="features-section collapsible-section">';
-      html += '<h3>⚙️ 特性支持详情 <small style="color:#666; font-weight:normal;">(点击展开/折叠)</small></h3>';
+      html += '<h3>' +getIcon('gear') +' 特性支持详情 <small style="color:#666; font-weight:normal;">(点击展开/折叠)</small></h3>';
 
       // 1. Vue3核心特性面板（默认展开）
       html += '<div class="collapsible-panel expanded" id="core-features-panel">';
@@ -2141,7 +2170,7 @@
         html += '<tr>';
         html += '<td><strong>' + feature.name + '</strong></td>';
         html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
-        html += supported ? '✅ 支持' : '❌ 不支持';
+        html += supported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         html += '</td>';
         html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '<span class="recommended">推荐</span>') + '</td>';
         html += '<td><small>' + feature.desc + '</small></td>';
@@ -2176,7 +2205,7 @@
         html += '<tr>';
         html += '<td>' + feature.name + '</td>';
         html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
-        html += supported ? '✅ 支持' : '❌ 不支持';
+        html += supported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         html += '</td>';
         html += '<td><small>' + feature.desc + '</small></td>';
         html += '</tr>';
@@ -2214,7 +2243,7 @@
         html += '<tr>';
         html += '<td>' + api.name + '</td>';
         html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">';
-        html += apiSupported ? '✅ 支持' : '❌ 不支持';
+        html += apiSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         if (apiDetails) html += '<br><small>' + apiDetails + '</small>';
         html += '</td>';
         html += '<td><small>' + api.desc + '</small></td>';
@@ -2246,7 +2275,7 @@
         html += '<tr>';
         html += '<td>' + cssFeature.name + '</td>';
         html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">';
-        html += cssSupported ? '✅ 支持' : '❌ 不支持';
+        html += cssSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
         html += '</td>';
         html += '<td><small>' + cssFeature.desc + '</small></td>';
         html += '</tr>';
@@ -2259,7 +2288,7 @@
     buildEnvironmentInfoTable: function() {
       var results = this.results;
       var html = '<div class="info-section" style="margin-top: 30px;">';
-      html += '<h3>📊 环境信息汇总</h3>';
+      html += '<h3>'+getIcon('chart') +' 环境信息汇总</h3>';
       html += '<table class="info-table">';
       html += '<tr><th>类别</th><th>项目</th><th>检测值</th><th>状态</th></tr>';
 
@@ -2290,11 +2319,11 @@
       html += '<td>' + this.getOSStatus(results.os) + '</td></tr>';
 
       html += '<tr><td>系统位数</td><td>' + this.escapeHtml(results.os.bits) + '</td>';
-      html += '<td>' + (results.os.bits !== '无法确定' ? '✅' : '❓') + '</td></tr>';
+      html += '<td>' + (results.os.bits !== '无法确定' ? getIcon('success') : '❓') + '</td></tr>';
 
       // 硬件信息
       html += '<tr><td rowspan="3">硬件</td>';
-      html += '<td>CPU 核心</td><td>' + this.formatHardwareValue(results.hardware.cpuCores) + '</td><td>⚙️</td></tr>';
+      html += '<td>CPU 核心</td><td>' + this.formatHardwareValue(results.hardware.cpuCores) + '</td><td>'+getIcon('gear') +'</td></tr>';
 
       html += '<tr><td>内存</td><td>' + this.formatHardwareValue(results.hardware.memory) + '</td><td>💾</td></tr>';
 
@@ -2305,15 +2334,15 @@
 
       if (results.hardware.gpu && results.hardware.gpu.webgl !== undefined) {
         if (results.hardware.gpu.webgl) {
-          html += '✅ 支持 (' + this.escapeHtml(results.hardware.gpu.webglVersion) + ')';
+          html += getIcon('success') + ' 支持 (' + this.escapeHtml(results.hardware.gpu.webglVersion) + ')';
         } else {
-          html += '❌ 不支持';
+          html += getIcon('error') + ' 不支持';
         }
       } else {
         html += '检测失败';
       }
 
-      html += '</td><td>' + (results.hardware.gpu && results.hardware.gpu.webgl ? '✅' : '❌') + '</td></tr>';
+      html += '</td><td>' + (results.hardware.gpu && results.hardware.gpu.webgl ? getIcon('success') : getIcon('error')) + '</td></tr>';
 
       html += '</table>';
       html += '</div>';
@@ -2353,7 +2382,7 @@
 
         if (hasAnyIssues) {
           html += '<div class="issues-section">';
-          html += '<h3>📋 详细问题报告</h3>';
+          html += '<h3>'+ getIcon('clipboard') +' 详细问题报告</h3>';
 
           // 显示严重问题
           if (detailed.critical.length > 0) {
@@ -2396,7 +2425,7 @@
 
       // 5. 优化建议
       html += '<div class="suggestions-section">';
-      html += '<h3>💡 优化建议</h3>';
+      html += '<h3>'+ getIcon('bulb') +' 优化建议</h3>';
 
       if (suggestions.length > 0) {
         for (var i = 0; i < suggestions.length; i++) {
@@ -2457,7 +2486,7 @@
     },
 
     getStatusIcon: function (supported) {
-      return supported ? '✅' : '❌';
+      return supported ? getIcon('success') : getIcon('error');
     },
 
     getVersionStatus: function (browser) {
@@ -2466,15 +2495,15 @@
       var key = this.getBrowserKey(browser.name);
       var minVersion = VUE3_REQUIREMENTS.browsers[key];
 
-      if (!minVersion) return '⚠️';
-      return browser.version >= minVersion ? '✅' : '❌';
+      if (!minVersion) return getIcon('warning');
+      return browser.version >= minVersion ? getIcon('success') : getIcon('error');
     },
 
     getOSStatus: function (os) {
       if (os.name === 'Windows' && (os.version === 'XP' || os.version === '2000')) {
-        return '❌';
+        return getIcon('error');
       }
-      return '✅';
+      return getIcon('success');
     },
 
     getSuggestionTypeText: function (type) {
@@ -2688,7 +2717,7 @@
       }
 
       if (!this.results || !this.results.detectionTime) {
-        showExportFeedback('❌ 请先完成检测', 'error');
+        showExportFeedback(getIcon('error') + ' 请先完成检测', 'error');
         return;
       }
 
@@ -2781,7 +2810,7 @@
 
         if (success) {
           var originalText = copyBtn.textContent;
-          copyBtn.textContent = '✅ 已复制';
+          copyBtn.textContent = getIcon('success') + ' 已复制';
           addClass(copyBtn, 'copied');
 
           setTimeout(function() {
@@ -2789,13 +2818,13 @@
             removeClass(copyBtn, 'copied');
           }, 3000);
 
-          showExportFeedback('✅ 链接已复制到剪贴板', 'success');
+          showExportFeedback(getIcon('success') + ' 链接已复制到剪贴板', 'success');
         } else {
-          showExportFeedback('❌ 复制失败，请手动复制', 'error');
+          showExportFeedback(getIcon('error') + ' 复制失败，请手动复制', 'error');
         }
       } catch (error) {
         console.error('复制失败:', error);
-        showExportFeedback('❌ 复制失败: ' + error.message, 'error');
+        showExportFeedback(getIcon('error') + ' 复制失败: ' + error.message, 'error');
       }
     },
 
