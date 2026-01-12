@@ -2255,7 +2255,7 @@
       return html;
     },
 
-// ================ 构建环境信息汇总表格 ================
+    // ================ 构建环境信息汇总表格 ================
     buildEnvironmentInfoTable: function() {
       var results = this.results;
       var html = '<div class="info-section" style="margin-top: 30px;">';
