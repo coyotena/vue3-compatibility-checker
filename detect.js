@@ -161,24 +161,20 @@
         success: '✅',
         error: '❌',
         warning: '⚠️',
-        gear: '⚙️',
-        clipboard: '📋',
-        bulb: '💡',
         chart: '📊',
-        target: '🎯'
+        expand: '▼',
+        collapse: '▶',
       };
       return unicodeIcons[type] || '';
     } else {
       // IE8及以下使用ASCII或CSS
       var asciiIcons = {
-        success: '[OK]',
-        error: '[X]',
-        warning: '[!]',
-        gear: '[设置]',
-        clipboard: '[报告]',
-        bulb: '[建议]',
+        success: '✓',
+        error: '✗',
+        warning: '!',
         chart: '[图表]',
-        target: '[目标]'
+        expand: '↓',
+        collapse: '→',
       };
       return asciiIcons[type] || '';
     }
@@ -771,9 +767,10 @@
 
   // 全局对象
   var Vue3Detector = {
-    results: function() {
+    getResults: function() {
       return DataManager.getState();
     },
+    results: null,
 
     // ================ 导出为 JSON 格式 ================
     exportAsJSON: function() {
@@ -997,7 +994,7 @@
           '    </div>\n' +
           '    \n' +
           '    <div class="section">\n' +
-          '        <h2>'+ getIcon('chart') +' 检测摘要</h2>\n' +
+          '        <h2>检测摘要</h2>\n' +
           '        <table class="feature-table">\n' +
           '            <tr>\n' +
           '                <th width="120">检测时间</th>\n' +
@@ -1066,6 +1063,7 @@
       var self = this;
       setTimeout(function () {
         try {
+          self.results = self.getResults();
           self.collectAllInfo();
           self.analyzeCompatibility();
           self.displayResults();
@@ -1935,7 +1933,7 @@
     buildFullFeaturesTablesHTML: function() {
       var results = this.results;
       var html = '<div class="section">\n' +
-        '<h2>'+ getIcon('gear') + ' 特性支持详情</h2>\n';
+        '<h2>特性支持详情</h2>\n';
 
       // 1. Vue3 核心特性表格
       html += '<div style="margin-bottom: 30px;">\n';
@@ -1961,7 +1959,7 @@
         html += '<tr>\n';
         html += '<td><strong>' + feature.name + '</strong></td>\n';
         html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">\n';
-        html += supported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += supported ? '支持' : '不支持';
         html += '</td>\n';
         html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '<span class="recommended">推荐</span>') + '</td>\n';
         html += '<td><small>' + feature.desc + '</small></td>\n';
@@ -1997,7 +1995,7 @@
         html += '<tr>\n';
         html += '<td>' + syntaxFeature.name + '</td>\n';
         html += '<td class="' + (syntaxSupported ? 'supported' : 'not-supported') + '">\n';
-        html += syntaxSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += syntaxSupported ? getIcon('success') + '支持' : getIcon('error') + '不支持';
         html += '</td>\n';
         html += '<td><small>' + syntaxFeature.desc + '</small></td>\n';
         html += '</tr>\n';
@@ -2036,7 +2034,7 @@
         html += '<tr>\n';
         html += '<td>' + api.name + '</td>\n';
         html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">\n';
-        html += apiSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += apiSupported ? '支持' : '不支持';
         if (apiDetails) html += '<br><small>' + apiDetails + '</small>';
         html += '</td>\n';
         html += '<td><small>' + api.desc + '</small></td>\n';
@@ -2069,7 +2067,7 @@
         html += '<tr>\n';
         html += '<td>' + cssFeature.name + '</td>\n';
         html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">\n';
-        html += cssSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += cssSupported ? '支持' : '不支持';
         html += '</td>\n';
         html += '<td><small>' + cssFeature.desc + '</small></td>\n';
         html += '</tr>\n';
@@ -2084,12 +2082,12 @@
     buildFullFeaturesTables: function() {
       var results = this.results;
       var html = '<div class="features-section collapsible-section">';
-      html += '<h3>' +getIcon('gear') +' 特性支持详情 <small style="color:#666; font-weight:normal;">(点击展开/折叠)</small></h3>';
+      html += '<h3>特性支持详情 <small style="color:#666; font-weight:normal;">(点击展开/折叠)</small></h3>';
 
       // 1. Vue3核心特性面板（默认展开）
       html += '<div class="collapsible-panel expanded" id="core-features-panel">';
       html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'core-features\')">';
-      html += '<h4><span class="arrow">▼</span> Vue3 核心依赖特性</h4>';
+      html += '<h4><span class="arrow">'+getIcon('expand')+'</span> Vue3 核心依赖特性</h4>';
       html += '</div>';
       html += '<div class="panel-content" id="core-features-content">';
       html += this.buildCoreFeaturesTable();
@@ -2099,7 +2097,7 @@
       // 2. 重要ES6+特性面板（默认折叠）
       html += '<div class="collapsible-panel" id="important-features-panel">';
       html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'important-features\')">';
-      html += '<h4><span class="arrow">▶</span> 重要 ES6+ 特性</h4>';
+      html += '<h4><span class="arrow">'+getIcon('collapse')+'</span> 重要 ES6+ 特性</h4>';
       html += '</div>';
       html += '<div class="panel-content" id="important-features-content" style="display:none;">';
       html += this.buildImportantFeaturesTable();
@@ -2109,7 +2107,7 @@
       // 3. Web API支持面板（默认折叠）
       html += '<div class="collapsible-panel" id="webapi-features-panel">';
       html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'webapi-features\')">';
-      html += '<h4><span class="arrow">▶</span> Web API 支持</h4>';
+      html += '<h4><span class="arrow">'+getIcon('collapse')+'</span> Web API 支持</h4>';
       html += '</div>';
       html += '<div class="panel-content" id="webapi-features-content" style="display:none;">';
       html += this.buildWebAPIsTable();
@@ -2119,7 +2117,7 @@
       // 4. CSS特性支持面板（默认折叠）
       html += '<div class="collapsible-panel" id="css-features-panel">';
       html += '<div class="panel-header" onclick="Vue3Detector.togglePanel(\'css-features\')">';
-      html += '<h4><span class="arrow">▶</span> CSS 特性支持</h4>';
+      html += '<h4><span class="arrow">'+getIcon('collapse')+'</span> CSS 特性支持</h4>';
       html += '</div>';
       html += '<div class="panel-content" id="css-features-content" style="display:none;">';
       html += this.buildCSSFeaturesTable();
@@ -2138,11 +2136,11 @@
 
       if (content.style.display === 'none' || content.style.display === '') {
         content.style.display = 'block';
-        arrow.textContent = '▼';
+        arrow.textContent = getIcon('expand');
         addClass(panel, 'expanded');
       } else {
         content.style.display = 'none';
-        arrow.textContent = '▶';
+        arrow.textContent = getIcon('collapse');
         removeClass(panel, 'expanded');
       }
     },
@@ -2170,7 +2168,7 @@
         html += '<tr>';
         html += '<td><strong>' + feature.name + '</strong></td>';
         html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
-        html += supported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += supported ? '支持' : '不支持';
         html += '</td>';
         html += '<td>' + (feature.required ? '<span class="required">必需</span>' : '<span class="recommended">推荐</span>') + '</td>';
         html += '<td><small>' + feature.desc + '</small></td>';
@@ -2205,7 +2203,7 @@
         html += '<tr>';
         html += '<td>' + feature.name + '</td>';
         html += '<td class="' + (supported ? 'supported' : 'not-supported') + '">';
-        html += supported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += supported ? '支持' : '不支持';
         html += '</td>';
         html += '<td><small>' + feature.desc + '</small></td>';
         html += '</tr>';
@@ -2243,7 +2241,7 @@
         html += '<tr>';
         html += '<td>' + api.name + '</td>';
         html += '<td class="' + (apiSupported ? 'supported' : 'not-supported') + '">';
-        html += apiSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += apiSupported ? '支持' : '不支持';
         if (apiDetails) html += '<br><small>' + apiDetails + '</small>';
         html += '</td>';
         html += '<td><small>' + api.desc + '</small></td>';
@@ -2275,7 +2273,7 @@
         html += '<tr>';
         html += '<td>' + cssFeature.name + '</td>';
         html += '<td class="' + (cssSupported ? 'supported' : 'not-supported') + '">';
-        html += cssSupported ? getIcon('success') + ' 支持' : getIcon('error') + ' 不支持';
+        html += cssSupported ? '支持' : '不支持';
         html += '</td>';
         html += '<td><small>' + cssFeature.desc + '</small></td>';
         html += '</tr>';
@@ -2288,19 +2286,19 @@
     buildEnvironmentInfoTable: function() {
       var results = this.results;
       var html = '<div class="info-section" style="margin-top: 30px;">';
-      html += '<h3>'+getIcon('chart') +' 环境信息汇总</h3>';
+      html += '<h3>环境信息汇总</h3>';
       html += '<table class="info-table">';
-      html += '<tr><th>类别</th><th>项目</th><th>检测值</th><th>状态</th></tr>';
+      html += '<tr><th>类别</th><th>项目</th><th>检测值</th></tr>';
 
       // 浏览器信息
       html += '<tr><td rowspan="4">浏览器</td>';
       html += '<td>类型</td><td>' + results.browser.name + '</td>';
-      html += '<td>' + this.getStatusIcon(results.browser.name !== 'Unknown') + '</td></tr>';
+      html += '</tr>';
 
       html += '<tr><td>版本</td><td>' + (results.browser.version || 'Unknown') + '</td>';
-      html += '<td>' + this.getVersionStatus(results.browser) + '</td></tr>';
+      html += '</tr>';
 
-      html += '<tr><td>渲染引擎</td><td>' + results.browser.engine + '</td><td>✅</td></tr>';
+      html += '<tr><td>渲染引擎</td><td>' + results.browser.engine + '</td></tr>';
 
       html += '<tr><td>User Agent</td>';
       html += '<td class="mono" title="' + this.escapeHtml(results.browser.userAgent) + '">';
@@ -2309,40 +2307,40 @@
       } else {
         html += results.browser.userAgent;
       }
-      html += '</td><td>📝</td></tr>';
+      html += '</td></tr>';
 
       // 操作系统
       html += '<tr><td rowspan="3">操作系统</td>';
-      html += '<td>类型</td><td>' + results.os.name + '</td><td>✅</td></tr>';
+      html += '<td>类型</td><td>' + results.os.name + '</td></tr>';
 
       html += '<tr><td>版本</td><td>' + results.os.version + '</td>';
-      html += '<td>' + this.getOSStatus(results.os) + '</td></tr>';
+      html += '</tr>';
 
       html += '<tr><td>系统位数</td><td>' + this.escapeHtml(results.os.bits) + '</td>';
-      html += '<td>' + (results.os.bits !== '无法确定' ? getIcon('success') : '❓') + '</td></tr>';
+      html += '</tr>';
 
       // 硬件信息
       html += '<tr><td rowspan="3">硬件</td>';
-      html += '<td>CPU 核心</td><td>' + this.formatHardwareValue(results.hardware.cpuCores) + '</td><td>'+getIcon('gear') +'</td></tr>';
+      html += '<td>CPU 核心</td><td>' + this.formatHardwareValue(results.hardware.cpuCores) + '</td></tr>';
 
-      html += '<tr><td>内存</td><td>' + this.formatHardwareValue(results.hardware.memory) + '</td><td>💾</td></tr>';
+      html += '<tr><td>内存</td><td>' + this.formatHardwareValue(results.hardware.memory) + '</td></tr>';
 
-      html += '<tr><td>屏幕分辨率</td><td>' + window.screen.width + '×' + window.screen.height + '</td><td>🖥️</td></tr>';
+      html += '<tr><td>屏幕分辨率</td><td>' + window.screen.width + '×' + window.screen.height + '</td></tr>';
 
       html += '<tr><td>GPU/WebGL</td>';
       html += '<td>WebGL支持</td><td>';
 
       if (results.hardware.gpu && results.hardware.gpu.webgl !== undefined) {
         if (results.hardware.gpu.webgl) {
-          html += getIcon('success') + ' 支持 (' + this.escapeHtml(results.hardware.gpu.webglVersion) + ')';
+          html += ' 支持 (' + this.escapeHtml(results.hardware.gpu.webglVersion) + ')';
         } else {
-          html += getIcon('error') + ' 不支持';
+          html += '不支持';
         }
       } else {
         html += '检测失败';
       }
 
-      html += '</td><td>' + (results.hardware.gpu && results.hardware.gpu.webgl ? getIcon('success') : getIcon('error')) + '</td></tr>';
+      html += '</td></tr>';
 
       html += '</table>';
       html += '</div>';
@@ -2382,7 +2380,7 @@
 
         if (hasAnyIssues) {
           html += '<div class="issues-section">';
-          html += '<h3>'+ getIcon('clipboard') +' 详细问题报告</h3>';
+          html += '<h3>详细问题报告</h3>';
 
           // 显示严重问题
           if (detailed.critical.length > 0) {
@@ -2425,7 +2423,7 @@
 
       // 5. 优化建议
       html += '<div class="suggestions-section">';
-      html += '<h3>'+ getIcon('bulb') +' 优化建议</h3>';
+      html += '<h3>优化建议</h3>';
 
       if (suggestions.length > 0) {
         for (var i = 0; i < suggestions.length; i++) {
@@ -2460,7 +2458,6 @@
       html += '<div class="footer-notes">';
       html += '<p><strong>说明：</strong></p>';
       html += '<ul>';
-      html += '<li>✅ 完全支持 | ⚠️ 部分支持/可能有问题 | ❌ 不支持</li>';
       html += '<li>以上检测基于 Vue3 官方兼容标准</li>';
 
       if (IS_IE_LOW) {
@@ -2483,27 +2480,6 @@
         return '<span class="hardware-unknown">' + this.escapeHtml(value) + '</span>';
       }
       return this.escapeHtml(value);
-    },
-
-    getStatusIcon: function (supported) {
-      return supported ? getIcon('success') : getIcon('error');
-    },
-
-    getVersionStatus: function (browser) {
-      if (browser.name === 'Unknown' || !browser.version) return '❓';
-
-      var key = this.getBrowserKey(browser.name);
-      var minVersion = VUE3_REQUIREMENTS.browsers[key];
-
-      if (!minVersion) return getIcon('warning');
-      return browser.version >= minVersion ? getIcon('success') : getIcon('error');
-    },
-
-    getOSStatus: function (os) {
-      if (os.name === 'Windows' && (os.version === 'XP' || os.version === '2000')) {
-        return getIcon('error');
-      }
-      return getIcon('success');
     },
 
     getSuggestionTypeText: function (type) {
