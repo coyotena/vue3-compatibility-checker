@@ -742,7 +742,7 @@
 
   // 全局对象
   var Vue3Detector = {
-    get results() {
+    results: function() {
       return DataManager.getState();
     },
 
