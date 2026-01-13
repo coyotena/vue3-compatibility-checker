@@ -542,7 +542,7 @@
       var newClassName = current.replace(
         new RegExp('(^|\\s)' + className + '(\\s|$)', 'g'),
         '$1$2'
-      ).replace(/\s+/g, ' ').trim();
+      ).replace(/\s+/g, ' ');
       element.className = newClassName;
     }
   }
