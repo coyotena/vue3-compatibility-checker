@@ -21,7 +21,20 @@
   }
 
   // ==============================================
-  // 2. 安全日志函数
+  // 2. 辅助函数：格式化时间为 yyyy-MM-dd HH:mm:ss
+  // ==============================================
+  function formatDateTime(date) {
+    var year = date.getFullYear();
+    var month = (date.getMonth() + 1).toString().padStart(2, '0');
+    var day = date.getDate().toString().padStart(2, '0');
+    var hours = date.getHours().toString().padStart(2, '0');
+    var minutes = date.getMinutes().toString().padStart(2, '0');
+    var seconds = date.getSeconds().toString().padStart(2, '0');
+    return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+  }
+
+  // ==============================================
+  // 3. 安全日志函数
   // ==============================================
   function log(msg, isError) {
     if (!CONFIG.debug) return;
@@ -32,7 +45,7 @@
   }
 
   // ==============================================
-  // 3. 安全检测工具函数
+  // 4. 安全检测工具函数
   // ==============================================
   function safeExec(fn, fallback) {
     try {
@@ -52,7 +65,7 @@
   }
 
   // ==============================================
-  // 4. 特性检测模块
+  // 5. 特性检测模块
   // ==============================================
   var FeatureDetector = {
     // ES6特性检测
@@ -174,7 +187,7 @@
   };
 
   // ==============================================
-  // 5. 浏览器检测模块
+  // 6. 浏览器检测模块
   // ==============================================
   var BrowserDetector = {
     detect: function() {
@@ -235,7 +248,7 @@
   };
 
   // ==============================================
-  // 6. 操作系统检测模块
+  // 7. 操作系统检测模块
   // ==============================================
   var OSDetector = {
     detect: function() {
@@ -276,7 +289,7 @@
   };
 
   // ==============================================
-  // 7. 硬件信息检测模块
+  // 8. 硬件信息检测模块
   // ==============================================
   var HardwareDetector = {
     detect: function() {
@@ -298,7 +311,7 @@
   };
 
   // ==============================================
-  // 8. 兼容性分析模块
+  // 9. 兼容性分析模块
   // ==============================================
   var CompatibilityAnalyzer = {
     analyze: function(browser, features) {
@@ -338,9 +351,13 @@
   };
 
   // ==============================================
-  // 9. 构建完整JSON报告（保持原有格式）
+  // 10. 构建完整JSON报告（时间格式：yyyy-MM-dd HH:mm:ss）
   // ==============================================
   function buildReport() {
+    // 获取当前时间（格式：yyyy-MM-dd HH:mm:ss）
+    var now = new Date();
+    var nowStr = formatDateTime(now);
+
     // 收集所有数据
     var browser = BrowserDetector.detect();
     var os = OSDetector.detect();
@@ -353,17 +370,17 @@
     var webAPIs = FeatureDetector.webAPIs();
     var compatibility = CompatibilityAnalyzer.analyze(browser, es6Features);
 
-    // 构建完整报告（与原有JSON格式完全一致）
+    // 构建完整报告（时间使用 yyyy-MM-dd HH:mm:ss 格式）
     var report = {
       meta: {
         tool: 'Vue3 Compatibility Detector',
         version: '3.0',
-        generatedAt: new Date().toISOString(),
+        generatedAt: nowStr,
         url: window.location.href,
         userAgent: navigator.userAgent || ''
       },
       detection: {
-        time: new Date().toISOString(),
+        time: nowStr,
         compatibility: {
           level: compatibility.level,
           description: compatibility.description
@@ -407,7 +424,7 @@
   }
 
   // ==============================================
-  // 10. 数据上报模块
+  // 11. 数据上报模块
   // ==============================================
   function reportData(data) {
     if (!CONFIG.enabled) return;
@@ -458,7 +475,7 @@
   }
 
   // ==============================================
-  // 11. 主检测函数
+  // 12. 主检测函数
   // ==============================================
   function runDetection() {
     try {
@@ -474,7 +491,7 @@
   }
 
   // ==============================================
-  // 12. 暴露API
+  // 13. 暴露API
   // ==============================================
   global.Vue3CompatChecker = {
     check: function() { return runDetection(); },
@@ -491,7 +508,7 @@
   };
 
   // ==============================================
-  // 13. 自动执行
+  // 14. 自动执行
   // ==============================================
   if (CONFIG.autoReport) {
     var scheduleDetection = function() {
